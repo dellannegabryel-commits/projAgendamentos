@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+model Category {
+  id          String        @id @default(uuid())
+  name        String        @unique
+  description String?
+  isActive    Boolean       @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime      @updatedAt
+  professionals Professional[]
+}
+
+model Professional {
+  id           String        @id @default(uuid())
+  name         String
+  phone        String
+  categoryId   String
+  category     Category      @relation(fields: [categoryId], references: [id])
+  address      String        @default("")
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  availabilities Availability[]
+  appointments Appointment[]
+}
+
+model Availability {
+  id             String       @id @default(uuid())
+  professionalId String
+  professional   Professional @relation(fields: [professionalId], references: [id])
+  dayOfWeek      Int
+  startTime      String
+  endTime        String
+  isActive       Boolean      @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([professionalId, dayOfWeek, startTime])
+}
+
+model Appointment {
+  id             String             @id @default(uuid())
+  professionalId String
+  professional   Professional        @relation(fields: [professionalId], references: [id])
+  clientName     String
+  clientPhone    String
+  date          DateTime
+  status        AppointmentStatus  @default(PENDING)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@unique([professionalId, date])
+  @@index([professionalId])
+  @@index([status])
+  @@index([date])
+}
