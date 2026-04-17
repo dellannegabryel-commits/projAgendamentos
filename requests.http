@@ -1,0 +1,65 @@
+### Listar categorias
+GET http://localhost:3000/api/categories
+
+### Criar categoria
+POST http://localhost:3000/api/categories
+Content-Type: application/json
+
+{
+  "name": "Corte de Cabelo",
+  "description": "Serviços de corte e styling"
+}
+
+### Listar profissionais
+GET http://localhost:3000/api/professionals
+
+### Criar profissional
+POST http://localhost:3000/api/professionals
+Content-Type: application/json
+
+{
+  "name": "João Silva",
+  "phone": "11999999999",
+  "categoryId": "CATEGORIA_ID_AQUI",
+  "address": "Rua das Flores, 123"
+}
+
+### Listar profissionais por categoria
+GET http://localhost:3000/api/professionals/category/CATEGORIA_ID_AQUI
+
+### Criar disponibilidade (dia 1 = segunda, 09:00 às 18:00)
+POST http://localhost:3000/api/availabilities
+Content-Type: application/json
+
+{
+  "professionalId": "PROFISSIONAL_ID_AQUI",
+  "dayOfWeek": 1,
+  "startTime": "09:00",
+  "endTime": "18:00"
+}
+
+### Obter horários disponíveis
+GET http://localhost:3000/api/availabilities/slots?professionalId=PROFISSIONAL_ID_AQUI&date=2024-03-20T10:00:00.000Z
+
+### Criar agendamento
+POST http://localhost:3000/api/appointments
+Content-Type: application/json
+
+{
+  "professionalId": "PROFISSIONAL_ID_AQUI",
+  "clientName": "Maria Santos",
+  "clientPhone": "11988887777",
+  "date": "2024-03-20T14:00:00.000Z"
+}
+
+### Listar agendamentos
+GET http://localhost:3000/api/appointments
+
+### Listar apenas pendentes
+GET http://localhost:3000/api/appointments?status=PENDING
+
+### Confirmar agendamento
+PATCH http://localhost:3000/api/appointments/APPOINTMENT_ID_AQUI/confirm
+
+### Cancelar agendamento
+PATCH http://localhost:3000/api/appointments/APPOINTMENT_ID_AQUI/cancel
