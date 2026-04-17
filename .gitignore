@@ -1,1 +1,5 @@
 localdocs
+node_modules
+.env
+.next
+next-env.d.ts
