@@ -30,12 +30,22 @@ export class ProfessionalService {
 
   async create(data: CreateProfessionalInput) {
     const parsed = professionalSchema.parse(data);
-    return this.repository.create(parsed);
+    return this.repository.create({
+      name: parsed.name,
+      phone: parsed.phone,
+      address: parsed.address,
+      category: { connect: { id: parsed.categoryId } }
+    });
   }
 
   async update(id: string, data: UpdateProfessionalInput) {
     await this.findById(id);
-    return this.repository.update(id, data);
+    const updateData: Record<string, unknown> = { ...data };
+    if (data.categoryId) {
+      updateData.category = { connect: { id: data.categoryId } };
+      delete updateData.categoryId;
+    }
+    return this.repository.update(id, updateData);
   }
 
   async delete(id: string) {
