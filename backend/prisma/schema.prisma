@@ -62,7 +62,6 @@ model Appointment {
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
 
-  @@unique([professionalId, date])
   @@index([professionalId])
   @@index([status])
   @@index([date])
