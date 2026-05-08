@@ -4,6 +4,11 @@ import { Request, Response } from 'express';
 export class AvailabilityController {
   private service = new AvailabilityService();
 
+  async findAll(req: Request, res: Response) {
+    const availabilities = await this.service.findAll();
+    res.json(availabilities);
+  }
+
   async findByProfessionalId(req: Request, res: Response) {
     const availabilities = await this.service.findByProfessionalId(req.params.professionalId);
     res.json(availabilities);

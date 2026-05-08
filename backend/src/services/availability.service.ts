@@ -21,6 +21,10 @@ export class AvailabilityService {
   private availabilityRepo = new AvailabilityRepository();
   private appointmentRepo = new AppointmentRepository();
 
+  async findAll() {
+    return this.availabilityRepo.findAll();
+  }
+
   async findByProfessionalId(professionalId: string) {
     return this.availabilityRepo.findByProfessionalId(professionalId);
   }
