@@ -18,8 +18,10 @@ projAgendamentos/
 ├── frontend/             # Frontend (Next.js 14 + React + Tailwind CSS)
 │   └── src/
 │       ├── app/          # App Router (admin, agendamento, home)
-│       ├── components/   # UI components (Button, Input, Select, Card, Badge, Stepper)
+│       │   └── admin/    # Admin pages (categorias, profissionais, horarios, agendamentos)
+│       ├── components/   # UI components (Button, Input, Select, Card, Badge, Stepper, Modal)
 │       └── lib/          # API client + mock data
+├── evolution-api/         # Evolution API (WhatsApp)
 ├── .github/workflows/    # CI (GitHub Actions)
 ├── docker-compose.yml    # Orquestração Docker
 ├── requests.http         # Exemplos de API
@@ -108,14 +110,16 @@ Frontend rodando em: `http://localhost:3001`
 
 ## 🐳 Docker
 
-O projeto é totalmente containerizado com 3 serviços:
+O projeto é totalmente containerizado com 4 serviços:
 
 | Serviço | Imagem | Porta (host) |
 |---------|--------|-------------|
 | `db` | postgres:16-alpine | 5432 |
+| `evolution-db` | postgres:16-alpine | 5433 |
 | `backend` | Node.js 20 (Express + Prisma) | 3001 |
 | `frontend` | Node.js 20 (Next.js) | 3000 |
 
+- A Evolution API roda separadamente (via `evolution-api/docker-compose.yml`) com seu próprio banco PostgreSQL (porta 5433)
 - Backend executa `prisma db push` automaticamente ao iniciar
 - Usuário não-root em todos os containers
 - OpenSSL instalado para compatibilidade com Prisma engines
@@ -143,7 +147,7 @@ Acionado em push/PR para as branches `develop` e `main`.
 | Frontend | Next.js 14, React 18, Tailwind CSS 3 |
 | Validação | Zod 3.22 |
 | WhatsApp | Evolution API |
-| UI Components | Button, Input, Select, Card, Badge, Stepper |
+| UI Components | Button, Input, Select, Card, Badge, Stepper, Modal |
 | Infra | Docker, Docker Compose, GitHub Actions |
 
 ---
@@ -153,6 +157,7 @@ Acionado em push/PR para as branches `develop` e `main`.
 - `requests.http` - Exemplos de requisição (VS Code REST Client)
 - `backend/prisma/schema.prisma` - Modelos de dados (Category, Professional, Availability, Appointment)
 - `frontend/src/lib/mock.ts` - Dados mockados para desenvolvimento
+- `evolution-api/docker-compose.yml` - Container da Evolution API para envio de WhatsApp
 
 ---
 
