@@ -28,15 +28,10 @@ export class AppointmentRepository {
   }
 
   async findByProfessionalAndDate(professionalId: string, date: Date): Promise<Appointment | null> {
-    const dateStart = new Date(date);
-    dateStart.setHours(0, 0, 0, 0);
-    const dateEnd = new Date(date);
-    dateEnd.setHours(23, 59, 59, 999);
-
     return prisma.appointment.findFirst({
       where: {
         professionalId,
-        date: { gte: dateStart, lte: dateEnd },
+        date: date,
         status: { not: AppointmentStatus.CANCELLED }
       }
     });
