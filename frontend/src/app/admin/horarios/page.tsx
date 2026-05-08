@@ -189,6 +189,7 @@ export default function AvailabilitiesPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <Select
             label="Profissional"
+            placeholder="Selecione um profissional"
             value={formData.professionalId}
             onChange={(e) => setFormData({ ...formData, professionalId: e.target.value })}
             options={professionals.map((p) => ({ value: p.id, label: p.name }))}
@@ -196,6 +197,7 @@ export default function AvailabilitiesPage() {
           />
           <Select
             label="Dia da Semana"
+            placeholder="Selecione o dia"
             value={formData.dayOfWeek}
             onChange={(e) => setFormData({ ...formData, dayOfWeek: e.target.value })}
             options={DIAS_SEMANA}

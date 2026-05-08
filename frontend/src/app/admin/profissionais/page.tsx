@@ -176,6 +176,7 @@ export default function ProfessionalsPage() {
           />
           <Select
             label="Categoria"
+            placeholder="Selecione uma categoria"
             value={formData.categoryId}
             onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
             options={categories.map((c) => ({ value: c.id, label: c.name }))}
