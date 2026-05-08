@@ -4,3 +4,4 @@ export { Select } from './Select';
 export { Card } from './Card';
 export { Badge } from './Badge';
 export { Stepper } from './Stepper';
+export { Modal } from './Modal';
