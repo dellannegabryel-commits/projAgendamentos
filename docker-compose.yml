@@ -15,6 +15,22 @@ services:
       timeout: 5s
       retries: 5
 
+  evolution-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: evolution123
+      POSTGRES_DB: evolution
+    ports:
+      - "5433:5432"
+    volumes:
+      - evolution_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U evolution" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   evolution:
     image: evoapicloud/evolution-api:v2.3.7
     ports:
@@ -22,12 +38,14 @@ services:
     environment:
       DATABASE_ENABLED: "true"
       DATABASE_PROVIDER: postgresql
-      DATABASE_CONNECTION_URI: postgresql://agendamento:agendamento123@db:5432/agendamento
+      DATABASE_CONNECTION_URI: postgresql://evolution:evolution123@evolution-db:5432/evolution
       AUTHENTICATION_API_KEY: ${WHATSAPP_API_KEY:-minha-api-key}
       AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "true"
       LANGUAGE: PT
+      CACHE_REDIS_ENABLED: "false"
+      CACHE_LOCAL_ENABLED: "true"
     depends_on:
-      db:
+      evolution-db:
         condition: service_healthy
     volumes:
       - evolution_instances:/evolution/instances
@@ -60,4 +78,5 @@ services:
 
 volumes:
   pgdata:
+  evolution_pgdata:
   evolution_instances:

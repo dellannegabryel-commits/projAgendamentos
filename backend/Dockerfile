@@ -24,7 +24,7 @@ COPY --from=base /app/node_modules ./node_modules
 COPY --from=base /app/prisma ./prisma
 COPY --from=base /app/package.json ./
 
-RUN chown -R 1001:1001 /app/node_modules/@prisma
+RUN chown -R 1001:1001 /app/node_modules/@prisma /app/node_modules/.prisma
 
 EXPOSE 3000
 USER nodeuser
