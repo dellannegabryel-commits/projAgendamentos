@@ -21,6 +21,10 @@ export class AvailabilityService {
   private availabilityRepo = new AvailabilityRepository();
   private appointmentRepo = new AppointmentRepository();
 
+  async findAll() {
+    return this.availabilityRepo.findAll();
+  }
+
   async findByProfessionalId(professionalId: string) {
     return this.availabilityRepo.findByProfessionalId(professionalId);
   }
@@ -49,16 +53,16 @@ export class AvailabilityService {
   }
 
   async getAvailableSlots(professionalId: string, date: Date) {
-    const dayOfWeek = date.getDay();
+    const dayOfWeek = date.getUTCDay();
     const availabilities = await this.availabilityRepo.findByProfessionalId(professionalId);
     
     const dayAvailabilities = availabilities.filter(a => a.dayOfWeek === dayOfWeek);
     if (dayAvailabilities.length === 0) return [];
 
     const dateStart = new Date(date);
-    dateStart.setHours(0, 0, 0, 0);
+    dateStart.setUTCHours(0, 0, 0, 0);
     const dateEnd = new Date(date);
-    dateEnd.setHours(23, 59, 59, 999);
+    dateEnd.setUTCHours(23, 59, 59, 999);
 
     const appointments = await this.appointmentRepo.findAll({
       professionalId,
@@ -86,7 +90,9 @@ export class AvailabilityService {
   }
 
   private formatTime(date: Date): string {
-    return date.toTimeString().slice(0, 5);
+    const hours = date.getUTCHours().toString().padStart(2, '0');
+    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
   }
 
   private generateTimeSlots(start: string, end: string): string[] {

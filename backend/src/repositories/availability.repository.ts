@@ -2,6 +2,13 @@ import { prisma } from './prisma.js';
 import { Availability, Prisma } from '@prisma/client';
 
 export class AvailabilityRepository {
+  async findAll(): Promise<Availability[]> {
+    return prisma.availability.findMany({
+      where: { isActive: true },
+      include: { professional: true },
+      orderBy: [ { dayOfWeek: 'asc' }, { startTime: 'asc' } ]
+    });
+  }
   async findByProfessionalId(professionalId: string): Promise<Availability[]> {
     return prisma.availability.findMany({
       where: { professionalId, isActive: true },

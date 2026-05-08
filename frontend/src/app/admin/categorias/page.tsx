@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button, Card, Input, Modal } from '@/components/ui';
-import { mockApi } from '@/lib/mock';
-import { Category } from '@/lib/api';
+import { api, Category } from '@/lib/api';
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -15,7 +14,7 @@ export default function CategoriesPage() {
 
   const loadCategories = async () => {
     try {
-      const data = await mockApi.categories.list();
+      const data = await api.categories.list();
       setCategories(data);
     } catch (err) {
       console.error(err);
@@ -47,9 +46,9 @@ export default function CategoriesPage() {
     setLoading(true);
     try {
       if (editingCategory) {
-        await mockApi.categories.update(editingCategory.id, formData);
+        await api.categories.update(editingCategory.id, formData);
       } else {
-        await mockApi.categories.create(formData);
+        await api.categories.create(formData);
       }
       await loadCategories();
       handleCloseModal();
@@ -63,7 +62,7 @@ export default function CategoriesPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir esta categoria?')) return;
     try {
-      await mockApi.categories.delete(id);
+      await api.categories.delete(id);
       await loadCategories();
     } catch (err: any) {
       alert(err.message || 'Erro ao excluir');

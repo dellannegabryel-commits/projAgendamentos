@@ -4,6 +4,8 @@ import { AvailabilityController } from '../controllers/index.js';
 const router = Router();
 const controller = new AvailabilityController();
 
+router.get('/', controller.findAll.bind(controller));
+
 router.get('/professional/:professionalId', controller.findByProfessionalId.bind(controller));
 router.get('/slots', controller.getAvailableSlots.bind(controller));
 router.post('/', controller.create.bind(controller));

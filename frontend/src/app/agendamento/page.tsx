@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button, Input, Select, Card, Stepper } from '@/components/ui';
-import { mockApi } from '@/lib/mock';
+import { api } from '@/lib/api';
 import { Category, Professional, TimeSlot } from '@/lib/api';
 import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -38,24 +38,36 @@ export default function AgendamentoPage() {
   const [formData, setFormData] = useState(initialFormData);
   const [categories, setCategories] = useState<Category[]>([]);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
+  const [professionalAvailabilities, setProfessionalAvailabilities] = useState<number[]>([]);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    mockApi.categories.list().then(setCategories).catch(console.error);
+    api.categories.list().then(setCategories).catch(console.error);
   }, []);
 
   useEffect(() => {
     if (formData.categoryId) {
-      mockApi.professionals.getByCategory(formData.categoryId).then(setProfessionals).catch(console.error);
+      api.professionals.getByCategory(formData.categoryId).then(setProfessionals).catch(console.error);
     }
   }, [formData.categoryId]);
 
   useEffect(() => {
+    if (formData.professionalId) {
+      api.availabilities.getByProfessional(formData.professionalId)
+        .then(data => {
+          const days = Array.from(new Set(data.map(a => a.dayOfWeek)));
+          setProfessionalAvailabilities(days);
+        })
+        .catch(console.error);
+    }
+  }, [formData.professionalId]);
+
+  useEffect(() => {
     if (formData.professionalId && formData.date) {
-      mockApi.availabilities.getSlots(formData.professionalId, formData.date).then(setTimeSlots).catch(console.error);
+      api.availabilities.getSlots(formData.professionalId, formData.date).then(setTimeSlots).catch(console.error);
     }
   }, [formData.professionalId, formData.date]);
 
@@ -97,7 +109,7 @@ export default function AgendamentoPage() {
     setLoading(true);
     setError('');
     try {
-      await mockApi.appointments.create({
+      await api.appointments.create({
         professionalId: formData.professionalId,
         clientName: formData.clientName,
         clientPhone: formData.clientPhone,
@@ -114,10 +126,11 @@ export default function AgendamentoPage() {
   const dateOptions = Array.from({ length: 30 }, (_, i) => {
     const date = addDays(new Date(), i + 1);
     return {
+      date,
       value: format(date, 'yyyy-MM-dd'),
       label: format(date, "EEEE, d 'de' MMMM", { locale: ptBR }),
     };
-  });
+  }).filter(option => professionalAvailabilities.includes(option.date.getDay()));
 
   const timeOptions = timeSlots
     .filter((s) => s.available)
