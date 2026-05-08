@@ -37,6 +37,16 @@ export interface TimeSlot {
   available: boolean;
 }
 
+export interface Availability {
+  id: string;
+  professionalId: string;
+  professional?: Professional;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  isActive: boolean;
+}
+
 export interface Appointment {
   id: string;
   professionalId: string;
@@ -55,6 +65,7 @@ export const api = {
       fetchApi<Category>('/categories', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: Partial<{ name: string; description: string }>) =>
       fetchApi<Category>(`/categories/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) => fetchApi<void>(`/categories/${id}`, { method: 'DELETE' }),
   },
 
   professionals: {
@@ -63,11 +74,21 @@ export const api = {
     get: (id: string) => fetchApi<Professional>(`/professionals/${id}`),
     create: (data: Omit<Professional, 'id' | 'category'>) =>
       fetchApi<Professional>('/professionals', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<Omit<Professional, 'id' | 'category'>>) =>
+      fetchApi<Professional>(`/professionals/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) => fetchApi<void>(`/professionals/${id}`, { method: 'DELETE' }),
   },
 
   availabilities: {
+    list: () => fetchApi<Availability[]>('/availabilities'),
+    getByProfessional: (professionalId: string) => fetchApi<Availability[]>(`/availabilities/professional/${professionalId}`),
     getSlots: (professionalId: string, date: string) =>
       fetchApi<TimeSlot[]>(`/availabilities/slots?professionalId=${professionalId}&date=${date}`),
+    create: (data: Omit<Availability, 'id' | 'professional'>) =>
+      fetchApi<Availability>('/availabilities', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<Omit<Availability, 'id' | 'professional'>>) =>
+      fetchApi<Availability>(`/availabilities/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) => fetchApi<void>(`/availabilities/${id}`, { method: 'DELETE' }),
   },
 
   appointments: {
