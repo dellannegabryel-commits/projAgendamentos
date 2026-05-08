@@ -27,11 +27,21 @@ export class AvailabilityService {
 
   async create(data: CreateAvailabilityInput) {
     const parsed = availabilitySchema.parse(data);
-    return this.availabilityRepo.create(parsed);
+    return this.availabilityRepo.create({
+      dayOfWeek: parsed.dayOfWeek,
+      startTime: parsed.startTime,
+      endTime: parsed.endTime,
+      professional: { connect: { id: parsed.professionalId } }
+    });
   }
 
   async update(id: string, data: UpdateAvailabilityInput) {
-    return this.availabilityRepo.update(id, data);
+    const updateData: Record<string, unknown> = { ...data };
+    if (data.professionalId) {
+      updateData.professional = { connect: { id: data.professionalId } };
+      delete updateData.professionalId;
+    }
+    return this.availabilityRepo.update(id, updateData);
   }
 
   async delete(id: string) {

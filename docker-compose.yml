@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: agendamento
+      POSTGRES_PASSWORD: agendamento123
+      POSTGRES_DB: agendamento
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U agendamento" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: postgresql://agendamento:agendamento123@db:5432/agendamento_db
+      PORT: 3001
+      WHATSAPP_API_URL: ${WHATSAPP_API_URL:-http://localhost:8080}
+      WHATSAPP_INSTANCE_NAME: ${WHATSAPP_INSTANCE_NAME:-main}
+      WHATSAPP_API_KEY: ${WHATSAPP_API_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001/api
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
