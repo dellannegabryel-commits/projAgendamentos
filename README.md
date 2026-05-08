@@ -156,6 +156,3 @@ Acionado em push/PR para as branches `develop` e `main`.
 
 ---
 
-## 📄 Licença
-
-MIT
