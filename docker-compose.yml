@@ -15,21 +15,35 @@ services:
       timeout: 5s
       retries: 5
 
+  evolution:
+    image: evolutionapi/evolution-api:v2.1.0
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_ENABLED: "true"
+      DATABASE_PROVIDER: postgresql
+      DATABASE_URL: postgresql://agendamento:agendamento123@db:5432/agendamento
+      API_KEY: ${WHATSAPP_API_KEY:-minha-api-key}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - evolution_instances:/evolution/instances
+
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "3001:3001"
+      - "3001:3000"
     environment:
-      DATABASE_URL: postgresql://agendamento:agendamento123@db:5432/agendamento_db
-      PORT: 3001
-      WHATSAPP_API_URL: ${WHATSAPP_API_URL:-http://localhost:8080}
+      DATABASE_URL: postgresql://agendamento:agendamento123@db:5432/agendamento
+      PORT: 3000
+      WHATSAPP_API_URL: http://evolution:8080
       WHATSAPP_INSTANCE_NAME: ${WHATSAPP_INSTANCE_NAME:-main}
-      WHATSAPP_API_KEY: ${WHATSAPP_API_KEY:-}
+      WHATSAPP_API_KEY: ${WHATSAPP_API_KEY:-minha-api-key}
     depends_on:
-      db:
-        condition: service_healthy
+      - evolution
 
   frontend:
     build:
@@ -44,3 +58,4 @@ services:
 
 volumes:
   pgdata:
+  evolution_instances:
