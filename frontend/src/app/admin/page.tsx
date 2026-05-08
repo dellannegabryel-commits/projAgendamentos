@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button, Card, Badge } from '@/components/ui';
-import { mockApi } from '@/lib/mock';
+import { api } from '@/lib/api';
 import { Appointment } from '@/lib/api';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -18,7 +18,7 @@ export default function AdminPage() {
   const loadAppointments = async () => {
     try {
       const status = filter === 'ALL' ? undefined : filter;
-      const data = await mockApi.appointments.list({ status });
+      const data = await api.appointments.list({ status });
       setAppointments(data);
     } catch (err) {
       console.error(err);
@@ -33,7 +33,7 @@ export default function AdminPage() {
     setLoading(true);
     setActionId(id);
     try {
-      await mockApi.appointments.confirm(id);
+      await api.appointments.confirm(id);
       await loadAppointments();
     } catch (err: any) {
       alert(err.message || 'Erro ao confirmar');
@@ -48,7 +48,7 @@ export default function AdminPage() {
     setLoading(true);
     setActionId(id);
     try {
-      await mockApi.appointments.cancel(id);
+      await api.appointments.cancel(id);
       await loadAppointments();
     } catch (err: any) {
       alert(err.message || 'Erro ao cancelar');

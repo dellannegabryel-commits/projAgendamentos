@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button, Card, Input, Select, Modal } from '@/components/ui';
-import { mockApi } from '@/lib/mock';
-import { Availability, Professional } from '@/lib/api';
+import { api, Availability, Professional } from '@/lib/api';
 
 const DIAS_SEMANA = [
   { value: '0', label: 'Domingo' },
@@ -33,8 +32,8 @@ export default function AvailabilitiesPage() {
   const loadData = async () => {
     try {
       const [availData, profData] = await Promise.all([
-        mockApi.availabilities.list(),
-        mockApi.professionals.list()
+        api.availabilities.list(),
+        api.professionals.list()
       ]);
       setAvailabilities(availData);
       setProfessionals(profData);
@@ -90,9 +89,9 @@ export default function AvailabilitiesPage() {
     setLoading(true);
     try {
       if (editingAvailability) {
-        await mockApi.availabilities.update(editingAvailability.id, payload);
+        await api.availabilities.update(editingAvailability.id, payload);
       } else {
-        await mockApi.availabilities.create(payload);
+        await api.availabilities.create(payload);
       }
       await loadData();
       handleCloseModal();
@@ -106,7 +105,7 @@ export default function AvailabilitiesPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir este horário?')) return;
     try {
-      await mockApi.availabilities.delete(id);
+      await api.availabilities.delete(id);
       await loadData();
     } catch (err: any) {
       alert(err.message || 'Erro ao excluir');

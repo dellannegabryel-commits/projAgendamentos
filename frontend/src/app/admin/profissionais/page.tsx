@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button, Card, Input, Select, Modal } from '@/components/ui';
-import { mockApi } from '@/lib/mock';
-import { Professional, Category } from '@/lib/api';
+import { api, Professional, Category } from '@/lib/api';
 
 export default function ProfessionalsPage() {
   const [professionals, setProfessionals] = useState<Professional[]>([]);
@@ -17,8 +16,8 @@ export default function ProfessionalsPage() {
   const loadData = async () => {
     try {
       const [profData, catData] = await Promise.all([
-        mockApi.professionals.list(),
-        mockApi.categories.list()
+        api.professionals.list(),
+        api.categories.list()
       ]);
       setProfessionals(profData);
       setCategories(catData);
@@ -62,9 +61,9 @@ export default function ProfessionalsPage() {
     setLoading(true);
     try {
       if (editingProfessional) {
-        await mockApi.professionals.update(editingProfessional.id, formData);
+        await api.professionals.update(editingProfessional.id, formData);
       } else {
-        await mockApi.professionals.create(formData);
+        await api.professionals.create(formData);
       }
       await loadData();
       handleCloseModal();
@@ -78,7 +77,7 @@ export default function ProfessionalsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir este profissional?')) return;
     try {
-      await mockApi.professionals.delete(id);
+      await api.professionals.delete(id);
       await loadData();
     } catch (err: any) {
       alert(err.message || 'Erro ao excluir');

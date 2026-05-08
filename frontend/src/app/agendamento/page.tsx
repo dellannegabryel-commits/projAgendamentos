@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button, Input, Select, Card, Stepper } from '@/components/ui';
-import { mockApi } from '@/lib/mock';
+import { api } from '@/lib/api';
 import { Category, Professional, TimeSlot } from '@/lib/api';
 import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -44,18 +44,18 @@ export default function AgendamentoPage() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    mockApi.categories.list().then(setCategories).catch(console.error);
+    api.categories.list().then(setCategories).catch(console.error);
   }, []);
 
   useEffect(() => {
     if (formData.categoryId) {
-      mockApi.professionals.getByCategory(formData.categoryId).then(setProfessionals).catch(console.error);
+      api.professionals.getByCategory(formData.categoryId).then(setProfessionals).catch(console.error);
     }
   }, [formData.categoryId]);
 
   useEffect(() => {
     if (formData.professionalId && formData.date) {
-      mockApi.availabilities.getSlots(formData.professionalId, formData.date).then(setTimeSlots).catch(console.error);
+      api.availabilities.getSlots(formData.professionalId, formData.date).then(setTimeSlots).catch(console.error);
     }
   }, [formData.professionalId, formData.date]);
 
@@ -97,7 +97,7 @@ export default function AgendamentoPage() {
     setLoading(true);
     setError('');
     try {
-      await mockApi.appointments.create({
+      await api.appointments.create({
         professionalId: formData.professionalId,
         clientName: formData.clientName,
         clientPhone: formData.clientPhone,
