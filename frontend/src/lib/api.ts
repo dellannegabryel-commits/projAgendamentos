@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_URL}${endpoint}`, {
@@ -12,6 +12,10 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
     throw new Error(error.error || 'Erro na requisição');
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
   }
 
   return response.json();
@@ -106,5 +110,7 @@ export const api = {
       fetchApi<Appointment>(`/appointments/${id}/confirm`, { method: 'PATCH' }),
     cancel: (id: string) =>
       fetchApi<Appointment>(`/appointments/${id}/cancel`, { method: 'PATCH' }),
+    delete: (id: string) =>
+      fetchApi<void>(`/appointments/${id}`, { method: 'DELETE' }),
   },
 };

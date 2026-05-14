@@ -47,4 +47,8 @@ export class AppointmentRepository {
       data: { status }
     });
   }
+
+  async delete(id: string): Promise<void> {
+    await prisma.appointment.delete({ where: { id } });
+  }
 }

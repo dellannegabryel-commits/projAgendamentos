@@ -9,5 +9,6 @@ router.get('/:id', controller.findById.bind(controller));
 router.post('/', controller.create.bind(controller));
 router.patch('/:id/confirm', controller.confirm.bind(controller));
 router.patch('/:id/cancel', controller.cancel.bind(controller));
+router.delete('/:id', controller.delete.bind(controller));
 
 export default router;

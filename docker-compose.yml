@@ -2,15 +2,15 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: agendamento
-      POSTGRES_PASSWORD: agendamento123
-      POSTGRES_DB: agendamento
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
-      - "5432:5432"
+      - "${DB_PORT}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U agendamento" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER}" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -18,15 +18,15 @@ services:
   evolution-db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: evolution
-      POSTGRES_PASSWORD: evolution123
-      POSTGRES_DB: evolution
+      POSTGRES_USER: ${EVOLUTION_DB_USER}
+      POSTGRES_PASSWORD: ${EVOLUTION_DB_PASSWORD}
+      POSTGRES_DB: ${EVOLUTION_DB_NAME}
     ports:
-      - "5433:5432"
+      - "${EVOLUTION_DB_PORT}:5432"
     volumes:
       - evolution_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U evolution" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${EVOLUTION_DB_USER}" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -38,8 +38,8 @@ services:
     environment:
       DATABASE_ENABLED: "true"
       DATABASE_PROVIDER: postgresql
-      DATABASE_CONNECTION_URI: postgresql://evolution:evolution123@evolution-db:5432/evolution
-      AUTHENTICATION_API_KEY: ${WHATSAPP_API_KEY:-minha-api-key}
+      DATABASE_CONNECTION_URI: ${EVOLUTION_DATABASE_URI}
+      AUTHENTICATION_API_KEY: ${WHATSAPP_API_KEY}
       AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "true"
       LANGUAGE: PT
       CACHE_REDIS_ENABLED: "false"
@@ -55,13 +55,13 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "3001:3000"
+      - "3001:${BACKEND_PORT}"
     environment:
-      DATABASE_URL: postgresql://agendamento:agendamento123@db:5432/agendamento
-      PORT: 3000
-      WHATSAPP_API_URL: http://evolution:8080
-      WHATSAPP_INSTANCE_NAME: ${WHATSAPP_INSTANCE_NAME:-main}
-      WHATSAPP_API_KEY: ${WHATSAPP_API_KEY:-minha-api-key}
+      DATABASE_URL: ${DATABASE_URL}
+      PORT: ${BACKEND_PORT}
+      WHATSAPP_API_URL: ${WHATSAPP_API_URL}
+      WHATSAPP_INSTANCE_NAME: ${WHATSAPP_INSTANCE_NAME}
+      WHATSAPP_API_KEY: ${WHATSAPP_API_KEY}
     depends_on:
       - evolution
 
@@ -72,7 +72,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:3001/api
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     depends_on:
       - backend
 
