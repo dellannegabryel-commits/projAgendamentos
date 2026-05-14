@@ -1,13 +1,24 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+import { RefreshCw, Trash2, XCircle, CheckCircle } from 'lucide-react';
 import { Button, Card, Badge } from '@/components/ui';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import { api } from '@/lib/api';
-import { Appointment } from '@/lib/api';
+import type { Appointment } from '@/lib/api';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 type FilterStatus = 'ALL' | 'PENDING' | 'CONFIRMED' | 'CANCELLED';
+
+const filters = [
+  { value: 'ALL' as const, label: 'Todos' },
+  { value: 'PENDING' as const, label: 'Pendentes' },
+  { value: 'CONFIRMED' as const, label: 'Confirmados' },
+  { value: 'CANCELLED' as const, label: 'Cancelados' },
+];
 
 export default function AdminPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -20,8 +31,8 @@ export default function AdminPage() {
       const status = filter === 'ALL' ? undefined : filter;
       const data = await api.appointments.list({ status });
       setAppointments(data);
-    } catch (err) {
-      console.error(err);
+    } catch {
+      toast.error('Erro ao carregar agendamentos');
     }
   };
 
@@ -34,9 +45,10 @@ export default function AdminPage() {
     setActionId(id);
     try {
       await api.appointments.confirm(id);
+      toast.success('Agendamento confirmado com sucesso!');
       await loadAppointments();
     } catch (err: any) {
-      alert(err.message || 'Erro ao confirmar');
+      toast.error(err.message || 'Erro ao confirmar');
     } finally {
       setLoading(false);
       setActionId(null);
@@ -49,9 +61,10 @@ export default function AdminPage() {
     setActionId(id);
     try {
       await api.appointments.cancel(id);
+      toast.success('Agendamento cancelado');
       await loadAppointments();
     } catch (err: any) {
-      alert(err.message || 'Erro ao cancelar');
+      toast.error(err.message || 'Erro ao cancelar');
     } finally {
       setLoading(false);
       setActionId(null);
@@ -64,9 +77,10 @@ export default function AdminPage() {
     setActionId(id);
     try {
       await api.appointments.delete(id);
+      toast.success('Agendamento excluído');
       await loadAppointments();
     } catch (err: any) {
-      alert(err.message || 'Erro ao excluir');
+      toast.error(err.message || 'Erro ao excluir');
     } finally {
       setLoading(false);
       setActionId(null);
@@ -81,66 +95,63 @@ export default function AdminPage() {
         return <Badge variant="success">Confirmado</Badge>;
       case 'CANCELLED':
         return <Badge variant="error">Cancelado</Badge>;
-      default:
-        return <Badge>{status}</Badge>;
     }
   };
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-semibold text-zinc-900">Agendamentos</h1>
-        <Button onClick={loadAppointments} variant="outline" size="sm">
-          Atualizar
-        </Button>
-      </div>
+      <PageHeader
+        title="Agendamentos"
+        description="Gerencie todos os agendamentos do sistema"
+        action={
+          <Button onClick={loadAppointments} variant="outline" size="sm" icon={<RefreshCw className="h-4 w-4" />}>
+            Atualizar
+          </Button>
+        }
+      />
 
-      <div className="flex gap-2 mb-6">
-        {(['ALL', 'PENDING', 'CONFIRMED', 'CANCELLED'] as const).map((status) => (
+      <div className="flex gap-2 mb-6 overflow-x-auto no-scrollbar">
+        {filters.map((f) => (
           <button
-            key={status}
-            onClick={() => setFilter(status)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filter === status
-                ? 'bg-zinc-900 text-white'
-                : 'bg-white text-zinc-600 hover:bg-zinc-100'
+            key={f.value}
+            onClick={() => setFilter(f.value)}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+              filter === f.value
+                ? 'bg-zinc-900 text-white shadow-sm'
+                : 'bg-white text-zinc-600 hover:bg-zinc-100 border border-zinc-200'
             }`}
           >
-            {status === 'ALL' ? 'Todos' : status === 'PENDING' ? 'Pendentes' : status === 'CONFIRMED' ? 'Confirmados' : 'Cancelados'}
+            {f.label}
           </button>
         ))}
       </div>
 
       {appointments.length === 0 ? (
-        <Card className="text-center py-12">
-          <p className="text-zinc-500">Nenhum agendamento encontrado.</p>
+        <Card>
+          <EmptyState
+            title="Nenhum agendamento encontrado"
+            description="Nenhum agendamento corresponde ao filtro selecionado."
+          />
         </Card>
       ) : (
         <Card padding="none">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-zinc-50 border-b border-zinc-200">
-                <tr>
-                  <th className="text-left text-xs font-medium text-zinc-500 uppercase tracking-wider px-6 py-3">
-                    Cliente
-                  </th>
-                  <th className="text-left text-xs font-medium text-zinc-500 uppercase tracking-wider px-6 py-3">
-                    Profissional
-                  </th>
-                  <th className="text-left text-xs font-medium text-zinc-500 uppercase tracking-wider px-6 py-3">
-                    Data/Hora
-                  </th>
-                  <th className="text-left text-xs font-medium text-zinc-500 uppercase tracking-wider px-6 py-3">
-                    Status
-                  </th>
-                  <th className="text-right text-xs font-medium text-zinc-500 uppercase tracking-wider px-6 py-3">
-                    Ações
-                  </th>
+              <thead>
+                <tr className="border-b border-zinc-100">
+                  {['Cliente', 'Profissional', 'Data/Hora', 'Status', 'Ações'].map((h) => (
+                    <th
+                      key={h}
+                      className="text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider px-6 py-4"
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-200">
+              <tbody className="divide-y divide-zinc-100">
                 {appointments.map((appointment) => (
-                  <tr key={appointment.id} className="hover:bg-zinc-50">
+                  <tr key={appointment.id} className="hover:bg-zinc-50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="text-sm font-medium text-zinc-900">{appointment.clientName}</div>
                       <div className="text-sm text-zinc-500">{appointment.clientPhone}</div>
@@ -167,6 +178,7 @@ export default function AdminPage() {
                               variant="primary"
                               onClick={() => handleConfirm(appointment.id)}
                               loading={actionId === appointment.id && loading}
+                              icon={<CheckCircle className="h-4 w-4" />}
                             >
                               Confirmar
                             </Button>
@@ -175,6 +187,7 @@ export default function AdminPage() {
                               variant="ghost"
                               onClick={() => handleCancel(appointment.id)}
                               loading={actionId === appointment.id && loading}
+                              icon={<XCircle className="h-4 w-4" />}
                             >
                               Cancelar
                             </Button>
@@ -186,6 +199,7 @@ export default function AdminPage() {
                             variant="ghost"
                             onClick={() => handleCancel(appointment.id)}
                             loading={actionId === appointment.id && loading}
+                            icon={<XCircle className="h-4 w-4" />}
                           >
                             Cancelar
                           </Button>
@@ -196,6 +210,7 @@ export default function AdminPage() {
                             variant="ghost"
                             onClick={() => handleDelete(appointment.id)}
                             loading={actionId === appointment.id && loading}
+                            icon={<Trash2 className="h-4 w-4" />}
                           >
                             Excluir
                           </Button>

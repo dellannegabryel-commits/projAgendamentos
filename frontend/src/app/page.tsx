@@ -1,35 +1,38 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui';
+import { Calendar, ShieldCheck } from 'lucide-react';
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full text-center">
-        <div className="w-16 h-16 bg-primary-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-          <svg className="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-        </div>
-        
-        <h1 className="text-2xl font-semibold text-zinc-900 mb-2">
-          Sistema de Agendamento
-        </h1>
-        <p className="text-zinc-600 mb-8">
-          Escolha uma opção para continuar
-        </p>
+    <div className="min-h-screen bg-gradient-to-br from-white via-primary-50/30 to-white">
+      <div className="max-w-lg mx-auto px-4 py-20 md:py-32">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-primary-100 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm shadow-primary-200">
+            <Calendar className="w-8 h-8 text-primary-600" />
+          </div>
 
-        <div className="space-y-3">
-          <Link href="/agendamento" className="block">
-            <Button className="w-full">
-              Agendar Serviço
-            </Button>
-          </Link>
-          
-          <Link href="/admin" className="block">
-            <Button variant="outline" className="w-full">
-              Área Admin
-            </Button>
-          </Link>
+          <h1 className="text-3xl md:text-4xl font-bold text-zinc-900 tracking-tight mb-3">
+            Agenda Fácil
+          </h1>
+          <p className="text-zinc-500 md:text-lg max-w-sm mx-auto mb-10">
+            Agende seus serviços de forma rápida e prática, sem complicação
+          </p>
+
+          <div className="space-y-3 max-w-xs mx-auto">
+            <Link href="/agendamento" className="block">
+              <Button size="xl" className="w-full shadow-sm shadow-primary-200">
+                <Calendar className="h-5 w-5" />
+                Agendar Serviço
+              </Button>
+            </Link>
+
+            <Link href="/admin" className="block">
+              <Button variant="outline" size="lg" className="w-full">
+                <ShieldCheck className="h-5 w-5" />
+                Área do Admin
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     </div>
