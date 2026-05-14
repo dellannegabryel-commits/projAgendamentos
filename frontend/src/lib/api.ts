@@ -14,6 +14,10 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
     throw new Error(error.error || 'Erro na requisição');
   }
 
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
   return response.json();
 }
 
@@ -106,5 +110,7 @@ export const api = {
       fetchApi<Appointment>(`/appointments/${id}/confirm`, { method: 'PATCH' }),
     cancel: (id: string) =>
       fetchApi<Appointment>(`/appointments/${id}/cancel`, { method: 'PATCH' }),
+    delete: (id: string) =>
+      fetchApi<void>(`/appointments/${id}`, { method: 'DELETE' }),
   },
 };

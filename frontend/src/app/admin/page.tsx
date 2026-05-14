@@ -58,6 +58,21 @@ export default function AdminPage() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir este agendamento?')) return;
+    setLoading(true);
+    setActionId(id);
+    try {
+      await api.appointments.delete(id);
+      await loadAppointments();
+    } catch (err: any) {
+      alert(err.message || 'Erro ao excluir');
+    } finally {
+      setLoading(false);
+      setActionId(null);
+    }
+  };
+
   const getStatusBadge = (status: Appointment['status']) => {
     switch (status) {
       case 'PENDING':
@@ -173,6 +188,16 @@ export default function AdminPage() {
                             loading={actionId === appointment.id && loading}
                           >
                             Cancelar
+                          </Button>
+                        )}
+                        {appointment.status === 'CANCELLED' && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDelete(appointment.id)}
+                            loading={actionId === appointment.id && loading}
+                          >
+                            Excluir
                           </Button>
                         )}
                       </div>

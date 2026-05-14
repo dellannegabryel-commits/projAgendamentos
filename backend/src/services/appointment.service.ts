@@ -79,7 +79,23 @@ export class AppointmentService {
       throw new Error('Agendamento já está cancelado');
     }
 
-    return this.appointmentRepo.updateStatus(id, AppointmentStatus.CANCELLED);
+    const updated = await this.appointmentRepo.updateStatus(id, AppointmentStatus.CANCELLED);
+
+    const professional = await this.professionalRepo.findById(appointment.professionalId);
+
+    await this.sendCancellationMessage(appointment, professional!);
+
+    return updated;
+  }
+
+  async delete(id: string) {
+    const appointment = await this.findById(id);
+
+    if (appointment.status !== AppointmentStatus.CANCELLED) {
+      throw new Error('Apenas agendamentos cancelados podem ser excluídos');
+    }
+
+    await this.appointmentRepo.delete(id);
   }
 
   private async sendConfirmationMessage(appointment: any, professional: any) {
@@ -99,6 +115,26 @@ Local: ${professional.address}`;
       });
     } catch (error) {
       console.error('Erro ao enviar WhatsApp:', error);
+    }
+  }
+
+  private async sendCancellationMessage(appointment: any, professional: any) {
+    const date = new Date(appointment.date);
+    const formattedDate = format(date, 'dd/MM/yyyy');
+    const formattedTime = format(date, 'HH:mm');
+
+    const message = `Olá ${appointment.clientName}, seu agendamento com ${professional.name} foi CANCELADO.
+📅 Data: ${formattedDate}
+🕒 Hora: ${formattedTime}
+Qualquer dúvida, entre em contato conosco.`;
+
+    try {
+      await this.whatsAppService.sendText({
+        number: appointment.clientPhone,
+        text: message
+      });
+    } catch (error) {
+      console.error('Erro ao enviar WhatsApp de cancelamento:', error);
     }
   }
 }

@@ -190,5 +190,9 @@ export const mockApi = {
       appointment.status = 'CANCELLED';
       return appointment;
     },
+    delete: async (id: string): Promise<void> => {
+      await delay(300);
+      appointments = appointments.filter((a) => a.id !== id);
+    },
   },
 };

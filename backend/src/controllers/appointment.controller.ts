@@ -50,4 +50,13 @@ export class AppointmentController {
       res.status(400).json({ error: error.message });
     }
   }
+
+  async delete(req: Request, res: Response) {
+    try {
+      await this.service.delete(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  }
 }
