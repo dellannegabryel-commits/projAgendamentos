@@ -4,8 +4,8 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  const adminEmail = 'admin@agendafacil.com';
-  const adminPassword = 'admin'; // Senha padrão para o primeiro acesso
+  const adminEmail = process.env.DEFAULT_ADMIN_EMAIL || 'admin@agendafacil.com';
+  const adminPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'admin'; // Senha padrão caso não definido no .env
 
   const existingAdmin = await prisma.admin.findUnique({
     where: { email: adminEmail },
