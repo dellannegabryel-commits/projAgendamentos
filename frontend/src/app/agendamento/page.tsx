@@ -9,7 +9,7 @@ import { DayPicker } from 'react-day-picker';
 import { format, addDays, isBefore, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { Button, Card, Stepper } from '@/components/ui';
 import { FormField } from '@/components/forms/FormField';
@@ -18,6 +18,8 @@ import { ProfessionalCard } from '@/components/scheduling/ProfessionalCard';
 import { TimeSlotButton } from '@/components/scheduling/TimeSlotButton';
 import { SuccessScreen } from '@/components/scheduling/SuccessScreen';
 import { Skeleton, ListSkeleton } from '@/components/feedback/Skeleton';
+import { EmptyState } from '@/components/feedback/EmptyState';
+import { ErrorState } from '@/components/feedback/ErrorState';
 import { api } from '@/lib/api';
 import type { Category, Professional, TimeSlot } from '@/lib/api';
 
@@ -78,6 +80,8 @@ export default function AgendamentoPage() {
   const [success, setSuccess] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [loadingCategories, setLoadingCategories] = useState(true);
+  const [categoriesError, setCategoriesError] = useState(false);
+  const [professionalsError, setProfessionalsError] = useState(false);
 
   const {
     register,
@@ -101,16 +105,17 @@ export default function AgendamentoPage() {
 
   useEffect(() => {
     api.categories.list()
-      .then(setCategories)
-      .catch(() => toast.error('Erro ao carregar categorias'))
+      .then((data) => { setCategories(data); setCategoriesError(false); })
+      .catch(() => { setCategoriesError(true); toast.error('Erro ao carregar categorias'); })
       .finally(() => setLoadingCategories(false));
   }, []);
 
   useEffect(() => {
     if (values.categoryId) {
+      setProfessionals([]);
       api.professionals.getByCategory(values.categoryId)
-        .then(setProfessionals)
-        .catch(() => toast.error('Erro ao carregar profissionais'));
+        .then((data) => { setProfessionals(data); setProfessionalsError(false); })
+        .catch(() => { setProfessionalsError(true); toast.error('Erro ao carregar profissionais'); });
     }
   }, [values.categoryId]);
 
@@ -264,8 +269,17 @@ export default function AgendamentoPage() {
                     </p>
                     {loadingCategories ? (
                       <ListSkeleton rows={3} />
+                    ) : categoriesError ? (
+                      <ErrorState
+                        title="Erro ao carregar serviços"
+                        description="Não foi possível carregar os serviços. Verifique sua conexão."
+                        onRetry={() => { setLoadingCategories(true); setCategoriesError(false); api.categories.list().then(setCategories).catch(() => setCategoriesError(true)).finally(() => setLoadingCategories(false)); }}
+                      />
                     ) : categories.length === 0 ? (
-                      <p className="text-center text-zinc-400 py-8">Nenhum serviço disponível</p>
+                      <EmptyState
+                        title="Nenhum serviço disponível"
+                        description="No momento não há serviços cadastrados para agendamento."
+                      />
                     ) : (
                       <div className="space-y-3">
                         {categories.map((cat) => (
@@ -292,8 +306,24 @@ export default function AgendamentoPage() {
                     <p className="text-sm text-zinc-500 -mt-2">
                       Selecione quem você prefere atender você
                     </p>
-                    {professionals.length === 0 ? (
-                      <p className="text-center text-zinc-400 py-8">Nenhum profissional disponível para este serviço</p>
+                    {professionalsError ? (
+                      <ErrorState
+                        title="Erro ao carregar profissionais"
+                        description="Não foi possível carregar os profissionais. Tente novamente."
+                        onRetry={() => {
+                          if (values.categoryId) {
+                            setProfessionalsError(false);
+                            api.professionals.getByCategory(values.categoryId)
+                              .then(setProfessionals)
+                              .catch(() => setProfessionalsError(true));
+                          }
+                        }}
+                      />
+                    ) : professionals.length === 0 ? (
+                      <EmptyState
+                        title="Nenhum profissional disponível"
+                        description="No momento não há profissionais disponíveis para este serviço."
+                      />
                     ) : (
                       <div className="space-y-3">
                         {professionals.map((prof) => (
@@ -360,9 +390,10 @@ export default function AgendamentoPage() {
                             ))}
                           </div>
                         ) : (
-                          <p className="text-center text-zinc-400 py-6 text-sm">
-                            Nenhum horário disponível para esta data.
-                          </p>
+                          <EmptyState
+                            title="Nenhum horário disponível"
+                            description="Não há horários disponíveis para esta data. Selecione outra data."
+                          />
                         )}
                       </div>
                     )}
