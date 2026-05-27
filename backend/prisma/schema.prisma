@@ -66,3 +66,11 @@ model Appointment {
   @@index([status])
   @@index([date])
 }
+
+model Admin {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+}

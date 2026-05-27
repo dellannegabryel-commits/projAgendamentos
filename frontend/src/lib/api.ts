@@ -1,11 +1,18 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('@agendafacil:token') : null;
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...options?.headers,
+  };
+
+  if (token) {
+    (headers as any)['Authorization'] = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${API_URL}${endpoint}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
+    headers,
     ...options,
   });
 
@@ -62,6 +69,15 @@ export interface Appointment {
 }
 
 export const api = {
+  auth: {
+    login: (data: unknown) =>
+      fetchApi<{ token: string; admin: { id: string; name: string; email: string } }>('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    me: () => fetchApi<{ id: string; name: string; email: string }>('/auth/me'),
+  },
+
   categories: {
     list: () => fetchApi<Category[]>('/categories'),
     get: (id: string) => fetchApi<Category>(`/categories/${id}`),

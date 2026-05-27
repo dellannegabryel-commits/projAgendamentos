@@ -1,14 +1,15 @@
 import { Router } from 'express';
 import { AppointmentController } from '../controllers/index.js';
+import { authMiddleware } from '../middlewares/auth.middleware.js';
 
 const router = Router();
 const controller = new AppointmentController();
 
-router.get('/', controller.findAll.bind(controller));
-router.get('/:id', controller.findById.bind(controller));
+router.get('/', authMiddleware, controller.findAll.bind(controller));
+router.get('/:id', authMiddleware, controller.findById.bind(controller));
 router.post('/', controller.create.bind(controller));
-router.patch('/:id/confirm', controller.confirm.bind(controller));
-router.patch('/:id/cancel', controller.cancel.bind(controller));
-router.delete('/:id', controller.delete.bind(controller));
+router.patch('/:id/confirm', authMiddleware, controller.confirm.bind(controller));
+router.patch('/:id/cancel', authMiddleware, controller.cancel.bind(controller));
+router.delete('/:id', authMiddleware, controller.delete.bind(controller));
 
 export default router;
