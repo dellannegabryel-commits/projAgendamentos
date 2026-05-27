@@ -1,43 +1,47 @@
 import { clsx } from 'clsx';
 import { ButtonHTMLAttributes, forwardRef } from 'react';
+import { Loader2 } from 'lucide-react';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
-  size?: 'sm' | 'md' | 'lg';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   loading?: boolean;
+  icon?: React.ReactNode;
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'primary', size = 'md', loading, disabled, children, ...props }, ref) => {
+  ({ className, variant = 'primary', size = 'md', loading, disabled, icon, children, ...props }, ref) => {
     return (
       <button
         ref={ref}
         disabled={disabled || loading}
         className={clsx(
-          'inline-flex items-center justify-center font-medium rounded-xl transition-all duration-200',
-          'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2',
-          'disabled:opacity-50 disabled:cursor-not-allowed',
+          'inline-flex items-center justify-center font-semibold rounded-2xl transition-all duration-200',
+          'focus:outline-none focus:ring-2 focus:ring-primary-500/30',
+          'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100',
+          'active:scale-[0.97]',
           {
-            'bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800': variant === 'primary',
-            'bg-zinc-100 text-zinc-900 hover:bg-zinc-200 active:bg-zinc-300': variant === 'secondary',
-            'border border-zinc-300 text-zinc-700 hover:bg-zinc-50 active:bg-zinc-100': variant === 'outline',
-            'text-zinc-600 hover:bg-zinc-100 active:bg-zinc-200': variant === 'ghost',
+            'bg-primary-600 text-white hover:bg-primary-700 shadow-sm hover:shadow-md': variant === 'primary',
+            'bg-zinc-100 text-zinc-900 hover:bg-zinc-200': variant === 'secondary',
+            'border-2 border-zinc-200 text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50': variant === 'outline',
+            'text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100': variant === 'ghost',
+            'bg-red-500 text-white hover:bg-red-600 shadow-sm': variant === 'danger',
           },
           {
-            'px-3 py-1.5 text-sm': size === 'sm',
-            'px-5 py-2.5 text-base': size === 'md',
-            'px-6 py-3 text-lg': size === 'lg',
+            'h-9 px-4 text-sm gap-1.5': size === 'sm',
+            'h-11 px-5 text-sm gap-2': size === 'md',
+            'h-12 px-6 text-base gap-2': size === 'lg',
+            'h-14 px-8 text-base gap-2.5': size === 'xl',
           },
           className
         )}
         {...props}
       >
-        {loading && (
-          <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-        )}
+        {loading ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : icon ? (
+          icon
+        ) : null}
         {children}
       </button>
     );

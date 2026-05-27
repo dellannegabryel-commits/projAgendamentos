@@ -2,7 +2,7 @@ import { clsx } from 'clsx';
 import { HTMLAttributes, forwardRef } from 'react';
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
-  variant?: 'default' | 'outlined';
+  variant?: 'default' | 'outlined' | 'ghost';
   padding?: 'none' | 'sm' | 'md' | 'lg';
 }
 
@@ -12,10 +12,11 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
       <div
         ref={ref}
         className={clsx(
-          'rounded-xl bg-white shadow-sm',
+          'rounded-2xl bg-white',
           {
-            'border border-zinc-200': variant === 'outlined',
-            'shadow-sm': variant === 'default',
+            'shadow-sm border border-zinc-100': variant === 'default',
+            'border-2 border-zinc-100': variant === 'outlined',
+            '': variant === 'ghost',
           },
           {
             'p-0': padding === 'none',

@@ -1,4 +1,8 @@
+'use client';
+
 import { clsx } from 'clsx';
+import { Check } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface Step {
   id: number;
@@ -11,58 +15,61 @@ interface StepperProps {
 }
 
 export function Stepper({ steps, currentStep }: StepperProps) {
+  const progress = ((currentStep - 1) / (steps.length - 1)) * 100;
+
   return (
     <div className="w-full">
-      <div className="flex items-center justify-between">
-        {steps.map((step, index) => (
-          <div key={step.id} className="flex items-center">
-            <div className="flex flex-col items-center">
-              <div
-                className={clsx(
-                  'w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300',
-                  {
-                    'bg-primary-600 text-white': currentStep >= step.id,
-                    'bg-zinc-100 text-zinc-400': currentStep < step.id,
-                  }
-                )}
-              >
-                {currentStep > step.id ? (
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                ) : (
-                  step.id
-                )}
+      <div className="relative">
+        <div className="h-1 bg-zinc-100 rounded-full overflow-hidden">
+          <motion.div
+            className="h-full bg-primary-500 rounded-full"
+            initial={false}
+            animate={{ width: `${progress}%` }}
+            transition={{ duration: 0.4, ease: 'easeOut' }}
+          />
+        </div>
+        <div className="flex justify-between mt-3">
+          {steps.map((step) => {
+            const isCompleted = currentStep > step.id;
+            const isCurrent = currentStep === step.id;
+
+            return (
+              <div key={step.id} className="flex flex-col items-center">
+                <motion.div
+                  initial={false}
+                  animate={{
+                    scale: isCurrent ? 1.1 : 1,
+                  }}
+                  transition={{ duration: 0.2 }}
+                  className={clsx(
+                    'w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors',
+                    {
+                      'bg-primary-500 text-white': isCompleted || isCurrent,
+                      'bg-zinc-100 text-zinc-400': !isCompleted && !isCurrent,
+                    }
+                  )}
+                >
+                  {isCompleted ? (
+                    <Check className="h-4 w-4" />
+                  ) : (
+                    step.id
+                  )}
+                </motion.div>
+                <span
+                  className={clsx(
+                    'mt-2 text-xs font-medium text-center leading-tight max-w-[80px]',
+                    {
+                      'text-primary-600': isCompleted || isCurrent,
+                      'text-zinc-400': !isCompleted && !isCurrent,
+                    }
+                  )}
+                >
+                  {step.label}
+                </span>
               </div>
-              <span
-                className={clsx(
-                  'mt-2 text-xs font-medium whitespace-nowrap transition-colors duration-300',
-                  {
-                    'text-primary-600': currentStep >= step.id,
-                    'text-zinc-400': currentStep < step.id,
-                  }
-                )}
-              >
-                {step.label}
-              </span>
-            </div>
-            {index < steps.length - 1 && (
-              <div
-                className={clsx(
-                  'flex-1 h-0.5 mx-4 transition-colors duration-300',
-                  {
-                    'bg-primary-600': currentStep > step.id,
-                    'bg-zinc-200': currentStep <= step.id,
-                  }
-                )}
-              />
-            )}
-          </div>
-        ))}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
