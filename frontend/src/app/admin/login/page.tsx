@@ -4,9 +4,11 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Lock, Mail } from 'lucide-react';
+import { Lock, Mail, LogIn } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
 import { api } from '@/lib/api';
 
 const loginSchema = z.object({
@@ -33,11 +35,11 @@ export default function AdminLoginPage() {
     try {
       const response = await api.auth.login(data);
       const { token, admin } = response;
-      
+
       localStorage.setItem('@agendafacil:token', token);
       localStorage.setItem('@agendafacil:user', JSON.stringify(admin));
-      document.cookie = `agendafacil_token=${token}; path=/; max-age=86400`; // 1 day
-      
+      document.cookie = `agendafacil_token=${token}; path=/; max-age=86400`;
+
       toast.success('Login realizado com sucesso!');
       router.push('/admin');
     } catch (error: any) {
@@ -48,55 +50,49 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50/50 p-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-gray-100 p-8 space-y-6">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-zinc-50 p-4">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-lg border border-zinc-100 p-8 space-y-6">
         <div className="text-center space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Agenda Fácil Admin</h1>
-          <p className="text-sm text-gray-500">Acesse o painel para gerenciar seus agendamentos</p>
+          <div className="w-14 h-14 rounded-2xl bg-primary-50 flex items-center justify-center mx-auto mb-4">
+            <LogIn className="h-7 w-7 text-primary-600" />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
+            Agenda Fácil
+          </h1>
+          <p className="text-sm text-zinc-500">
+            Acesse o painel administrativo
+          </p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700" htmlFor="email">E-mail</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input
-                id="email"
-                type="email"
-                {...register('email')}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                placeholder="admin@agendafacil.com"
-              />
-            </div>
-            {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
-          </div>
+          <Input
+            id="email"
+            type="email"
+            label="E-mail"
+            placeholder="admin@agendafacil.com"
+            error={errors.email?.message}
+            icon={<Mail className="h-5 w-5" />}
+            {...register('email')}
+          />
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700" htmlFor="password">Senha</label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input
-                id="password"
-                type="password"
-                {...register('password')}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                placeholder="••••••••"
-              />
-            </div>
-            {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
-          </div>
+          <Input
+            id="password"
+            type="password"
+            label="Senha"
+            placeholder="••••••••"
+            error={errors.password?.message}
+            icon={<Lock className="h-5 w-5" />}
+            {...register('password')}
+          />
 
-          <button
+          <Button
             type="submit"
-            disabled={isLoading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center h-11"
+            loading={isLoading}
+            className="w-full h-12 mt-2"
+            size="lg"
           >
-            {isLoading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              'Entrar'
-            )}
-          </button>
+            {isLoading ? 'Entrando...' : 'Entrar'}
+          </Button>
         </form>
       </div>
     </div>
