@@ -112,10 +112,12 @@ export const api = {
   },
 
   appointments: {
-    list: (filters?: { status?: string; professionalId?: string }) => {
+    list: (filters?: { status?: string; professionalId?: string; dateFrom?: string; dateTo?: string }) => {
       const params = new URLSearchParams();
       if (filters?.status) params.set('status', filters.status);
       if (filters?.professionalId) params.set('professionalId', filters.professionalId);
+      if (filters?.dateFrom) params.set('dateFrom', filters.dateFrom);
+      if (filters?.dateTo) params.set('dateTo', filters.dateTo);
       const query = params.toString();
       return fetchApi<Appointment[]>(`/appointments${query ? `?${query}` : ''}`);
     },
