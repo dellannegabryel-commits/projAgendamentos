@@ -1,5 +1,6 @@
 import { AvailabilityRepository, AppointmentRepository } from '../repositories/index.js';
-import { AppointmentStatus } from '@prisma/client';
+import { AppointmentStatus, Prisma } from '@prisma/client';
+import { ConflictError } from '../shared/errors/index.js';
 import { getDayOfWeekInBRT, formatTimeInBRT } from '../shared/timezone/index.js';
 import { z } from 'zod';
 
@@ -34,12 +35,22 @@ export class AvailabilityService {
 
   async create(data: CreateAvailabilityInput) {
     const parsed = availabilitySchema.parse(data);
-    return this.availabilityRepo.create({
-      dayOfWeek: parsed.dayOfWeek,
-      startTime: parsed.startTime,
-      endTime: parsed.endTime,
-      professional: { connect: { id: parsed.professionalId } }
-    });
+    try {
+      return await this.availabilityRepo.create({
+        dayOfWeek: parsed.dayOfWeek,
+        startTime: parsed.startTime,
+        endTime: parsed.endTime,
+        professional: { connect: { id: parsed.professionalId } }
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        throw new ConflictError(
+          'Já existe um horário com este início para este profissional neste dia',
+          'DUPLICATE_AVAILABILITY'
+        );
+      }
+      throw err;
+    }
   }
 
   async update(id: string, data: UpdateAvailabilityInput) {
@@ -48,7 +59,17 @@ export class AvailabilityService {
       updateData.professional = { connect: { id: data.professionalId } };
       delete updateData.professionalId;
     }
-    return this.availabilityRepo.update(id, updateData);
+    try {
+      return await this.availabilityRepo.update(id, updateData);
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        throw new ConflictError(
+          'Já existe um horário com este início para este profissional neste dia',
+          'DUPLICATE_AVAILABILITY'
+        );
+      }
+      throw err;
+    }
   }
 
   async delete(id: string) {
