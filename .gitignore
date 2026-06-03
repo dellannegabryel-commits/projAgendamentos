@@ -4,3 +4,6 @@ node_modules
 .next
 next-env.d.ts
 dist/
+opencode.json
+docs/ 
+AGENTS.md
