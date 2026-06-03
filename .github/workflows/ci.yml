@@ -8,6 +8,17 @@ on:
     branches: [develop, main]
 
 jobs:
+  audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm audit --audit-level=high --prefix backend
+      - run: npm audit --audit-level=critical --prefix frontend
+
   backend:
     name: Backend
     runs-on: ubuntu-latest
@@ -25,8 +36,13 @@ jobs:
           cache-dependency-path: ./backend/package-lock.json
 
       - run: npm ci
+      - run: npx prisma validate
+        env:
+          DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
       - run: npx prisma generate
+      - run: npm run lint
       - run: npm run build
+      - run: npm run test
 
   frontend:
     name: Frontend
@@ -45,7 +61,16 @@ jobs:
           cache-dependency-path: ./frontend/package-lock.json
 
       - run: npm ci
+      - run: npm run lint
       - run: npm run build
         env:
           NEXT_TELEMETRY_DISABLED: 1
+
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: docker compose --env-file .env.ci build
 

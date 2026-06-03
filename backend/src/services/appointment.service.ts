@@ -1,6 +1,8 @@
-import { AppointmentRepository, ProfessionalRepository } from '../repositories/index.js';
+import { AppointmentRepository, ProfessionalRepository, AvailabilityRepository } from '../repositories/index.js';
 import { AppointmentStatus } from '@prisma/client';
 import { WhatsAppService } from './whatsapp.service.js';
+import { NotFoundError, ConflictError, AppError } from '../shared/errors/index.js';
+import { logger } from '../shared/logger/index.js';
 import { z } from 'zod';
 import { format } from 'date-fns';
 
@@ -11,11 +13,12 @@ const appointmentSchema = z.object({
   date: z.string().transform(str => new Date(str))
 });
 
-export type CreateAppointmentInput = z.infer<typeof appointmentSchema>;
+export type CreateAppointmentInput = z.input<typeof appointmentSchema>;
 
 export class AppointmentService {
   private appointmentRepo = new AppointmentRepository();
   private professionalRepo = new ProfessionalRepository();
+  private availabilityRepo = new AvailabilityRepository();
   private whatsAppService = new WhatsAppService();
 
   async findAll(filters?: { status?: AppointmentStatus; professionalId?: string; dateFrom?: string; dateTo?: string }) {
@@ -31,20 +34,43 @@ export class AppointmentService {
 
   async findById(id: string) {
     const appointment = await this.appointmentRepo.findById(id);
-    if (!appointment) throw new Error('Agendamento não encontrado');
+    if (!appointment) throw new NotFoundError('Agendamento não encontrado');
     return appointment;
   }
 
   async create(data: CreateAppointmentInput) {
     const parsed = appointmentSchema.parse(data);
+    const now = new Date();
+
+    if (parsed.date <= now) {
+      throw new AppError('A data do agendamento deve ser no futuro', 'PAST_DATE');
+    }
+
+    const dayOfWeek = parsed.date.getUTCDay();
+    const timeStr = this.formatTime(parsed.date);
+
+    const availabilities = await this.availabilityRepo.findByProfessionalId(parsed.professionalId);
+    const dayAvailabilities = availabilities.filter(a => a.dayOfWeek === dayOfWeek);
+
+    if (dayAvailabilities.length === 0) {
+      throw new AppError('Profissional não disponível neste dia', 'NO_AVAILABILITY');
+    }
+
+    const isWithinAvailability = dayAvailabilities.some(a => {
+      return timeStr >= a.startTime && timeStr < a.endTime;
+    });
+
+    if (!isWithinAvailability) {
+      throw new AppError('Horário fora da disponibilidade do profissional', 'INVALID_TIME');
+    }
     
     const existing = await this.appointmentRepo.findByProfessionalAndDate(
       parsed.professionalId,
       parsed.date
     );
     
-    if (existing && existing.status !== AppointmentStatus.CANCELLED) {
-      throw new Error('Horário já está agendado');
+    if (existing) {
+      throw new ConflictError('Horário já está agendado', 'SLOT_UNAVAILABLE');
     }
 
     return this.appointmentRepo.create({
@@ -56,11 +82,17 @@ export class AppointmentService {
     });
   }
 
+  private formatTime(date: Date): string {
+    const hours = date.getUTCHours().toString().padStart(2, '0');
+    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  }
+
   async confirm(id: string) {
     const appointment = await this.findById(id);
     
     if (appointment.status !== AppointmentStatus.PENDING) {
-      throw new Error('Apenas agendamentos pendentes podem ser confirmados');
+      throw new AppError('Apenas agendamentos pendentes podem ser confirmados', 'INVALID_STATUS');
     }
 
     const updated = await this.appointmentRepo.updateStatus(id, AppointmentStatus.CONFIRMED);
@@ -76,7 +108,7 @@ export class AppointmentService {
     const appointment = await this.findById(id);
     
     if (appointment.status === AppointmentStatus.CANCELLED) {
-      throw new Error('Agendamento já está cancelado');
+      throw new AppError('Agendamento já está cancelado', 'ALREADY_CANCELLED');
     }
 
     const updated = await this.appointmentRepo.updateStatus(id, AppointmentStatus.CANCELLED);
@@ -92,7 +124,7 @@ export class AppointmentService {
     const appointment = await this.findById(id);
 
     if (appointment.status !== AppointmentStatus.CANCELLED) {
-      throw new Error('Apenas agendamentos cancelados podem ser excluídos');
+      throw new AppError('Apenas agendamentos cancelados podem ser excluídos', 'INVALID_STATUS');
     }
 
     await this.appointmentRepo.delete(id);
@@ -114,7 +146,7 @@ Local: ${professional.address}`;
         text: message
       });
     } catch (error) {
-      console.error('Erro ao enviar WhatsApp:', error);
+      logger.error({ err: error }, 'Erro ao enviar WhatsApp');
     }
   }
 
@@ -134,7 +166,7 @@ Qualquer dúvida, entre em contato conosco.`;
         text: message
       });
     } catch (error) {
-      console.error('Erro ao enviar WhatsApp de cancelamento:', error);
+      logger.error({ err: error }, 'Erro ao enviar WhatsApp de cancelamento');
     }
   }
 }

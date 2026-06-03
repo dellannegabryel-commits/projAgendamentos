@@ -1,4 +1,5 @@
 import { ProfessionalRepository } from '../repositories/index.js';
+import { NotFoundError } from '../shared/errors/index.js';
 import { z } from 'zod';
 
 const professionalSchema = z.object({
@@ -24,7 +25,7 @@ export class ProfessionalService {
 
   async findById(id: string) {
     const professional = await this.repository.findById(id);
-    if (!professional) throw new Error('Profissional não encontrado');
+    if (!professional) throw new NotFoundError('Profissional não encontrado');
     return professional;
   }
 

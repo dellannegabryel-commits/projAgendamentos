@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getEvolutionConfig } from '../config/index.js';
 
 export interface WhatsAppMessage {
   number: string;
@@ -11,9 +12,10 @@ export class WhatsAppService {
   private apiKey: string;
 
   constructor() {
-    this.baseUrl = process.env.WHATSAPP_API_URL || 'http://localhost:8080';
-    this.instanceName = process.env.WHATSAPP_INSTANCE_NAME || 'main';
-    this.apiKey = process.env.WHATSAPP_API_KEY || '';
+    const config = getEvolutionConfig();
+    this.baseUrl = config.apiUrl;
+    this.instanceName = config.instanceName;
+    this.apiKey = config.apiKey;
   }
 
   async sendText(message: WhatsAppMessage): Promise<void> {
