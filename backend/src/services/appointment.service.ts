@@ -1,4 +1,4 @@
-import { AppointmentRepository, ProfessionalRepository } from '../repositories/index.js';
+import { AppointmentRepository, ProfessionalRepository, AvailabilityRepository } from '../repositories/index.js';
 import { AppointmentStatus } from '@prisma/client';
 import { WhatsAppService } from './whatsapp.service.js';
 import { NotFoundError, ConflictError, AppError } from '../shared/errors/index.js';
@@ -18,6 +18,7 @@ export type CreateAppointmentInput = z.infer<typeof appointmentSchema>;
 export class AppointmentService {
   private appointmentRepo = new AppointmentRepository();
   private professionalRepo = new ProfessionalRepository();
+  private availabilityRepo = new AvailabilityRepository();
   private whatsAppService = new WhatsAppService();
 
   async findAll(filters?: { status?: AppointmentStatus; professionalId?: string; dateFrom?: string; dateTo?: string }) {
@@ -39,13 +40,36 @@ export class AppointmentService {
 
   async create(data: CreateAppointmentInput) {
     const parsed = appointmentSchema.parse(data);
+    const now = new Date();
+
+    if (parsed.date <= now) {
+      throw new AppError('A data do agendamento deve ser no futuro', 'PAST_DATE');
+    }
+
+    const dayOfWeek = parsed.date.getUTCDay();
+    const timeStr = this.formatTime(parsed.date);
+
+    const availabilities = await this.availabilityRepo.findByProfessionalId(parsed.professionalId);
+    const dayAvailabilities = availabilities.filter(a => a.dayOfWeek === dayOfWeek);
+
+    if (dayAvailabilities.length === 0) {
+      throw new AppError('Profissional não disponível neste dia', 'NO_AVAILABILITY');
+    }
+
+    const isWithinAvailability = dayAvailabilities.some(a => {
+      return timeStr >= a.startTime && timeStr < a.endTime;
+    });
+
+    if (!isWithinAvailability) {
+      throw new AppError('Horário fora da disponibilidade do profissional', 'INVALID_TIME');
+    }
     
     const existing = await this.appointmentRepo.findByProfessionalAndDate(
       parsed.professionalId,
       parsed.date
     );
     
-    if (existing && existing.status !== AppointmentStatus.CANCELLED) {
+    if (existing) {
       throw new ConflictError('Horário já está agendado', 'SLOT_UNAVAILABLE');
     }
 
@@ -56,6 +80,12 @@ export class AppointmentService {
       date: parsed.date,
       status: AppointmentStatus.PENDING
     });
+  }
+
+  private formatTime(date: Date): string {
+    const hours = date.getUTCHours().toString().padStart(2, '0');
+    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
   }
 
   async confirm(id: string) {
