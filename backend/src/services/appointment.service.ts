@@ -3,8 +3,16 @@ import { AppointmentStatus, Prisma } from '@prisma/client';
 import { WhatsAppService } from './whatsapp.service.js';
 import { NotFoundError, ConflictError, AppError } from '../shared/errors/index.js';
 import { logger } from '../shared/logger/index.js';
+import { getDayOfWeekInBRT, formatTimeInBRT, formatDateInBRT } from '../shared/timezone/index.js';
 import { z } from 'zod';
-import { format } from 'date-fns';
+
+const isoDateTime = z.string()
+  .refine(
+    s => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:?\d{2})$/.test(s),
+    'Data deve estar no formato ISO 8601 com fuso horário (ex: 2026-12-15T10:00:00-03:00 ou 2026-12-15T13:00:00.000Z)'
+  )
+  .transform(s => new Date(s))
+  .refine(d => !isNaN(d.getTime()), 'Data inválida');
 
 const appointmentSchema = z.object({
   professionalId: z.string().uuid('ID do profissional inválido'),
@@ -12,9 +20,7 @@ const appointmentSchema = z.object({
   clientPhone: z.string()
     .transform(s => s.replace(/\D/g, ''))
     .pipe(z.string().regex(/^\d{10,11}$/, 'Telefone inválido')),
-  date: z.string()
-    .transform(s => new Date(s))
-    .refine(d => !isNaN(d.getTime()), 'Data inválida')
+  date: isoDateTime
 });
 
 export type CreateAppointmentInput = z.input<typeof appointmentSchema>;
@@ -50,8 +56,8 @@ export class AppointmentService {
       throw new AppError('A data do agendamento deve ser no futuro', 'PAST_DATE');
     }
 
-    const dayOfWeek = parsed.date.getUTCDay();
-    const timeStr = this.formatTime(parsed.date);
+    const dayOfWeek = getDayOfWeekInBRT(parsed.date);
+    const timeStr = formatTimeInBRT(parsed.date);
 
     const availabilities = await this.availabilityRepo.findByProfessionalId(parsed.professionalId);
     const dayAvailabilities = availabilities.filter(a => a.dayOfWeek === dayOfWeek);
@@ -91,12 +97,6 @@ export class AppointmentService {
       }
       throw err;
     }
-  }
-
-  private formatTime(date: Date): string {
-    const hours = date.getUTCHours().toString().padStart(2, '0');
-    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
-    return `${hours}:${minutes}`;
   }
 
   async confirm(id: string) {
@@ -153,9 +153,9 @@ export class AppointmentService {
 
   private async sendConfirmationMessage(appointment: any, professional: any) {
     const date = new Date(appointment.date);
-    const formattedDate = format(date, 'dd/MM/yyyy');
-    const formattedTime = format(date, 'HH:mm');
-    
+    const formattedDate = formatDateInBRT(date);
+    const formattedTime = formatTimeInBRT(date);
+
     const message = `Olá ${appointment.clientName}, seu agendamento com ${professional.name} foi CONFIRMADO!
 📅 Data: ${formattedDate}
 🕒 Hora: ${formattedTime}
@@ -173,8 +173,8 @@ Local: ${professional.address}`;
 
   private async sendCancellationMessage(appointment: any, professional: any) {
     const date = new Date(appointment.date);
-    const formattedDate = format(date, 'dd/MM/yyyy');
-    const formattedTime = format(date, 'HH:mm');
+    const formattedDate = formatDateInBRT(date);
+    const formattedTime = formatTimeInBRT(date);
 
     const message = `Olá ${appointment.clientName}, seu agendamento com ${professional.name} foi CANCELADO.
 📅 Data: ${formattedDate}
