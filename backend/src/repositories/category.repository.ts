@@ -10,7 +10,7 @@ export class CategoryRepository {
   }
 
   async findById(id: string): Promise<Category | null> {
-    return prisma.category.findUnique({ where: { id } });
+    return prisma.category.findFirst({ where: { id, isActive: true } });
   }
 
   async create(data: Prisma.CategoryCreateInput): Promise<Category> {

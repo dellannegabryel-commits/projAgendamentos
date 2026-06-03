@@ -6,12 +6,13 @@ const router = Router();
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const [db, evolution] = await Promise.all([checkDatabase(), checkEvolution()]);
-    const status = db && evolution ? 'ok' : 'degraded';
+    const evolutionOk = evolution;
+    const dbOk = db;
 
-    res.json({
-      status,
-      database: db ? 'connected' : 'disconnected',
-      evolution: evolution ? 'connected' : 'disconnected',
+    res.status(dbOk ? 200 : 503).json({
+      status: dbOk ? 'ok' : 'degraded',
+      database: dbOk ? 'connected' : 'disconnected',
+      evolution: evolutionOk ? 'connected' : 'disconnected',
       uptime: getUptime(),
     });
   } catch (error) {

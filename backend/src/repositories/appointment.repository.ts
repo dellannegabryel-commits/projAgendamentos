@@ -48,6 +48,14 @@ export class AppointmentRepository {
     });
   }
 
+  async updateStatusWhere(where: { id: string; status: AppointmentStatus }, newStatus: AppointmentStatus): Promise<number> {
+    const result = await prisma.appointment.updateMany({
+      where: { id: where.id, status: where.status },
+      data: { status: newStatus }
+    });
+    return result.count;
+  }
+
   async delete(id: string): Promise<void> {
     await prisma.appointment.delete({ where: { id } });
   }

@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 const categorySchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
-  description: z.string().optional()
+  description: z.string().max(500).optional()
 });
 
 export type CreateCategoryInput = z.infer<typeof categorySchema>;

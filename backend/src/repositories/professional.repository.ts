@@ -18,8 +18,8 @@ export class ProfessionalRepository {
   }
 
   async findById(id: string): Promise<Professional | null> {
-    return prisma.professional.findUnique({
-      where: { id },
+    return prisma.professional.findFirst({
+      where: { id, isActive: true },
       include: { category: true, availabilities: true }
     });
   }

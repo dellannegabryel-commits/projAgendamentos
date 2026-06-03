@@ -20,7 +20,7 @@ async function main() {
         password: hashedPassword,
       },
     });
-    console.log(`Admin criado com sucesso: ${adminEmail} / ${adminPassword}`);
+    console.log(`Admin criado com sucesso: ${adminEmail}`);
   } else {
     console.log('Admin já existe no banco de dados.');
   }

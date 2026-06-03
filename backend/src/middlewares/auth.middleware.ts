@@ -1,13 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { getAppConfig } from '../config/index.js';
+import { UnauthorizedError } from '../shared/errors/index.js';
 
 export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
-     res.status(401).json({ error: 'Token não fornecido' });
-     return;
+    next(new UnauthorizedError('Token não fornecido'));
+    return;
   }
 
   const [, token] = authHeader.split(' ');
@@ -18,7 +19,7 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
     (req as any).user = decoded;
     next();
   } catch (err) {
-     res.status(401).json({ error: 'Token inválido' });
-     return;
+    next(new UnauthorizedError('Token inválido'));
+    return;
   }
 };
