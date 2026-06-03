@@ -1,6 +1,5 @@
-import { PrismaClient, Admin } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { Admin } from '@prisma/client';
+import { prisma } from './prisma.js';
 
 export class AdminRepository {
   async findByEmail(email: string): Promise<Admin | null> {

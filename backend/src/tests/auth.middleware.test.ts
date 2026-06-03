@@ -28,16 +28,14 @@ describe('authMiddleware', () => {
     const { req, res, next } = createMockReqRes();
     authMiddleware(req, res, next);
 
-    expect(res.status).toHaveBeenCalledWith(401);
-    expect(next).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 401 }));
   });
 
   it('deve rejeitar token inválido', () => {
     const { req, res, next } = createMockReqRes('Bearer invalid-token');
     authMiddleware(req, res, next);
 
-    expect(res.status).toHaveBeenCalledWith(401);
-    expect(next).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 401 }));
   });
 
   it('deve aceitar token válido', async () => {

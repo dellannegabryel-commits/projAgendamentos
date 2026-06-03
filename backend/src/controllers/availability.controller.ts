@@ -1,5 +1,6 @@
 import { AvailabilityService } from '../services/index.js';
 import { Request, Response, NextFunction } from 'express';
+import { z } from 'zod';
 
 export class AvailabilityController {
   private service = new AvailabilityService();
@@ -24,18 +25,17 @@ export class AvailabilityController {
 
   async getAvailableSlots(req: Request, res: Response, next: NextFunction) {
     try {
-      const { professionalId, date } = req.query;
-      
-      if (!professionalId || !date) {
-        res.status(400).json({
-          error: { code: 'MISSING_PARAMS', message: 'professionalId e date são obrigatórios' }
-        });
-        return;
-      }
+      const querySchema = z.object({
+        professionalId: z.string().uuid('ID do profissional inválido'),
+        date: z.string()
+          .refine(d => /^\d{4}-\d{2}-\d{2}/.test(d), 'Data deve estar no formato YYYY-MM-DD')
+          .refine(d => !isNaN(new Date(d).getTime()), 'Data inválida'),
+      });
+      const { professionalId, date } = querySchema.parse(req.query);
       
       const slots = await this.service.getAvailableSlots(
-        professionalId as string,
-        new Date(date as string)
+        professionalId,
+        new Date(date)
       );
       res.json(slots);
     } catch (error) {

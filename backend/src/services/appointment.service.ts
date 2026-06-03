@@ -1,5 +1,5 @@
 import { AppointmentRepository, ProfessionalRepository, AvailabilityRepository } from '../repositories/index.js';
-import { AppointmentStatus } from '@prisma/client';
+import { AppointmentStatus, Prisma } from '@prisma/client';
 import { WhatsAppService } from './whatsapp.service.js';
 import { NotFoundError, ConflictError, AppError } from '../shared/errors/index.js';
 import { logger } from '../shared/logger/index.js';
@@ -9,8 +9,12 @@ import { format } from 'date-fns';
 const appointmentSchema = z.object({
   professionalId: z.string().uuid('ID do profissional inválido'),
   clientName: z.string().min(1, 'Nome do cliente é obrigatório'),
-  clientPhone: z.string().min(10, 'Telefone inválido'),
-  date: z.string().transform(str => new Date(str))
+  clientPhone: z.string()
+    .transform(s => s.replace(/\D/g, ''))
+    .pipe(z.string().regex(/^\d{10,11}$/, 'Telefone inválido')),
+  date: z.string()
+    .transform(s => new Date(s))
+    .refine(d => !isNaN(d.getTime()), 'Data inválida')
 });
 
 export type CreateAppointmentInput = z.input<typeof appointmentSchema>;
@@ -42,7 +46,7 @@ export class AppointmentService {
     const parsed = appointmentSchema.parse(data);
     const now = new Date();
 
-    if (parsed.date <= now) {
+    if (parsed.date < now) {
       throw new AppError('A data do agendamento deve ser no futuro', 'PAST_DATE');
     }
 
@@ -73,13 +77,20 @@ export class AppointmentService {
       throw new ConflictError('Horário já está agendado', 'SLOT_UNAVAILABLE');
     }
 
-    return this.appointmentRepo.create({
-      professional: { connect: { id: parsed.professionalId } },
-      clientName: parsed.clientName,
-      clientPhone: parsed.clientPhone,
-      date: parsed.date,
-      status: AppointmentStatus.PENDING
-    });
+    try {
+      return await this.appointmentRepo.create({
+        professional: { connect: { id: parsed.professionalId } },
+        clientName: parsed.clientName,
+        clientPhone: parsed.clientPhone,
+        date: parsed.date,
+        status: AppointmentStatus.PENDING
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        throw new ConflictError('Horário já está agendado', 'SLOT_UNAVAILABLE');
+      }
+      throw err;
+    }
   }
 
   private formatTime(date: Date): string {
@@ -89,34 +100,44 @@ export class AppointmentService {
   }
 
   async confirm(id: string) {
-    const appointment = await this.findById(id);
-    
-    if (appointment.status !== AppointmentStatus.PENDING) {
-      throw new AppError('Apenas agendamentos pendentes podem ser confirmados', 'INVALID_STATUS');
+    const count = await this.appointmentRepo.updateStatusWhere(
+      { id, status: AppointmentStatus.PENDING },
+      AppointmentStatus.CONFIRMED
+    );
+
+    if (count === 0) {
+      const appointment = await this.findById(id);
+      if (appointment.status !== AppointmentStatus.PENDING) {
+        throw new AppError('Apenas agendamentos pendentes podem ser confirmados', 'INVALID_STATUS');
+      }
+      throw new NotFoundError('Agendamento não encontrado');
     }
 
-    const updated = await this.appointmentRepo.updateStatus(id, AppointmentStatus.CONFIRMED);
-    
+    const appointment = await this.findById(id);
     const professional = await this.professionalRepo.findById(appointment.professionalId);
-    
     await this.sendConfirmationMessage(appointment, professional!);
-    
-    return updated;
+    return appointment;
   }
 
   async cancel(id: string) {
     const appointment = await this.findById(id);
-    
+
     if (appointment.status === AppointmentStatus.CANCELLED) {
       throw new AppError('Agendamento já está cancelado', 'ALREADY_CANCELLED');
     }
 
-    const updated = await this.appointmentRepo.updateStatus(id, AppointmentStatus.CANCELLED);
+    const count = await this.appointmentRepo.updateStatusWhere(
+      { id, status: appointment.status },
+      AppointmentStatus.CANCELLED
+    );
 
-    const professional = await this.professionalRepo.findById(appointment.professionalId);
+    if (count === 0) {
+      throw new AppError('Agendamento já foi modificado por outro usuário', 'CONCURRENT_MODIFICATION');
+    }
 
-    await this.sendCancellationMessage(appointment, professional!);
-
+    const updated = await this.findById(id);
+    const professional = await this.professionalRepo.findById(updated.professionalId);
+    await this.sendCancellationMessage(updated, professional!);
     return updated;
   }
 

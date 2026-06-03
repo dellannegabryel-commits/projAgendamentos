@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -22,15 +22,9 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { api } from '@/lib/api';
 import type { Category, Professional, TimeSlot } from '@/lib/api';
+import { maskPhone, stripPhone } from '@/lib/phone';
 
 import 'react-day-picker/style.css';
-
-const phoneMask = (value: string) => {
-  const digits = value.replace(/\D/g, '').slice(0, 11);
-  if (digits.length <= 2) return `(${digits}`;
-  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
-};
 
 const schema = z.object({
   clientName: z.string().min(1, 'Precisamos do seu nome para continuar'),
@@ -85,9 +79,9 @@ export default function AgendamentoPage() {
 
   const {
     register,
-    watch,
     setValue,
     trigger,
+    control,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -101,44 +95,69 @@ export default function AgendamentoPage() {
     },
   });
 
-  const values = watch();
+  const categoryId = useWatch({ control, name: 'categoryId' });
+  const professionalId = useWatch({ control, name: 'professionalId' });
+  const date = useWatch({ control, name: 'date' });
+  const clientName = useWatch({ control, name: 'clientName' });
+  const clientPhone = useWatch({ control, name: 'clientPhone' });
+  const time = useWatch({ control, name: 'time' });
+
+  const reset = useCallback(() => {
+    setValue('clientName', '');
+    setValue('clientPhone', '');
+    setValue('categoryId', '');
+    setValue('professionalId', '');
+    setValue('date', '');
+    setValue('time', '');
+    setSelectedDate(undefined);
+    setCurrentStep(1);
+    setSuccess(false);
+  }, [setValue]);
 
   useEffect(() => {
-    api.categories.list()
+    const abort = new AbortController();
+    api.categories.list({ signal: abort.signal })
       .then((data) => { setCategories(data); setCategoriesError(false); })
       .catch(() => { setCategoriesError(true); toast.error('Erro ao carregar categorias'); })
       .finally(() => setLoadingCategories(false));
+    return () => abort.abort();
   }, []);
 
   useEffect(() => {
-    if (values.categoryId) {
+    const abort = new AbortController();
+    if (categoryId) {
       setProfessionals([]);
-      api.professionals.getByCategory(values.categoryId)
+      api.professionals.getByCategory(categoryId, { signal: abort.signal })
         .then((data) => { setProfessionals(data); setProfessionalsError(false); })
         .catch(() => { setProfessionalsError(true); toast.error('Erro ao carregar profissionais'); });
     }
-  }, [values.categoryId]);
+    return () => abort.abort();
+  }, [categoryId]);
 
   useEffect(() => {
-    if (values.professionalId) {
-      api.availabilities.getByProfessional(values.professionalId)
+    const abort = new AbortController();
+    if (professionalId) {
+      api.availabilities.getByProfessional(professionalId, { signal: abort.signal })
         .then(data => {
           const days = Array.from(new Set(data.map(a => a.dayOfWeek)));
           setAvailableDays(days);
         })
         .catch(() => toast.error('Erro ao carregar disponibilidades'));
     }
-  }, [values.professionalId]);
+    return () => abort.abort();
+  }, [professionalId]);
 
   useEffect(() => {
-    if (values.professionalId && values.date) {
+    const abort = new AbortController();
+    if (professionalId && date) {
       setLoadingSlots(true);
-      api.availabilities.getSlots(values.professionalId, values.date)
+      api.availabilities.getSlots(professionalId, date, { signal: abort.signal })
         .then(setTimeSlots)
         .catch(() => toast.error('Erro ao carregar horários'))
         .finally(() => setLoadingSlots(false));
     }
-  }, [values.professionalId, values.date]);
+    return () => abort.abort();
+  }, [professionalId, date]);
 
   const goToStep = useCallback((step: number) => {
     setDirection(step > currentStep ? 1 : -1);
@@ -174,10 +193,10 @@ export default function AgendamentoPage() {
     setSubmitting(true);
     try {
       await api.appointments.create({
-        professionalId: values.professionalId,
-        clientName: values.clientName,
-        clientPhone: values.clientPhone,
-        date: `${values.date}T${values.time}:00`,
+        professionalId,
+        clientName,
+        clientPhone: stripPhone(clientPhone),
+        date: `${date}T${time}:00`,
       });
       setSuccess(true);
       toast.success('Agendamento confirmado com sucesso!');
@@ -189,16 +208,17 @@ export default function AgendamentoPage() {
   };
 
   if (success) {
-    const cat = categories.find(c => c.id === values.categoryId);
-    const prof = professionals.find(p => p.id === values.professionalId);
+    const cat = categories.find(c => c.id === categoryId);
+    const prof = professionals.find(p => p.id === professionalId);
+    if (!cat || !prof) return null;
     return (
       <div className="min-h-screen bg-gradient-to-b from-white to-zinc-50 flex items-center justify-center p-4">
         <SuccessScreen
-          clientName={values.clientName}
-          date={new Date(`${values.date}T${values.time}:00`)}
-          professional={prof!}
-          category={cat!}
-          onNewBooking={() => window.location.reload()}
+          clientName={clientName}
+          date={new Date(`${date}T${time}:00`)}
+          professional={prof}
+          category={cat}
+          onNewBooking={() => reset()}
         />
       </div>
     );
@@ -253,8 +273,8 @@ export default function AgendamentoPage() {
                         {...register('clientPhone')}
                         placeholder="(63) 99999-9999"
                         inputMode="numeric"
-                        value={values.clientPhone}
-                        onChange={e => setValue('clientPhone', phoneMask(e.target.value), { shouldValidate: true })}
+                        value={clientPhone}
+                        onChange={e => setValue('clientPhone', maskPhone(e.target.value), { shouldValidate: true })}
                         className="w-full h-12 px-4 rounded-2xl border-2 border-zinc-200 bg-white text-zinc-900 placeholder:text-zinc-400 transition-all duration-200 hover:border-zinc-300 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 focus:outline-none"
                       />
                     </FormField>
@@ -286,7 +306,7 @@ export default function AgendamentoPage() {
                           <CategoryCard
                             key={cat.id}
                             category={cat}
-                            selected={values.categoryId === cat.id}
+                            selected={categoryId === cat.id}
                             onClick={() => {
                               setValue('categoryId', cat.id, { shouldValidate: true });
                               setValue('professionalId', '', { shouldValidate: true });
@@ -311,9 +331,9 @@ export default function AgendamentoPage() {
                         title="Erro ao carregar profissionais"
                         description="Não foi possível carregar os profissionais. Tente novamente."
                         onRetry={() => {
-                          if (values.categoryId) {
+                          if (categoryId) {
                             setProfessionalsError(false);
-                            api.professionals.getByCategory(values.categoryId)
+                            api.professionals.getByCategory(categoryId)
                               .then(setProfessionals)
                               .catch(() => setProfessionalsError(true));
                           }
@@ -330,7 +350,7 @@ export default function AgendamentoPage() {
                           <ProfessionalCard
                             key={prof.id}
                             professional={prof}
-                            selected={values.professionalId === prof.id}
+                            selected={professionalId === prof.id}
                             onClick={() => {
                               setValue('professionalId', prof.id, { shouldValidate: true });
                               setValue('date', '', { shouldValidate: true });
@@ -366,7 +386,7 @@ export default function AgendamentoPage() {
                       />
                     </div>
 
-                    {values.date && (
+                    {date && (
                       <div>
                         <p className="text-sm font-medium text-zinc-700 mb-3">
                           Horários disponíveis
@@ -384,7 +404,7 @@ export default function AgendamentoPage() {
                                 key={slot.time}
                                 time={slot.time}
                                 available={slot.available}
-                                selected={values.time === slot.time}
+                                selected={time === slot.time}
                                 onClick={() => setValue('time', slot.time, { shouldValidate: true })}
                               />
                             ))}
@@ -408,12 +428,12 @@ export default function AgendamentoPage() {
                     </p>
                     <div className="bg-zinc-50 rounded-2xl p-5 space-y-4">
                       {[
-                        { label: 'Nome', value: values.clientName },
-                        { label: 'WhatsApp', value: values.clientPhone },
-                        { label: 'Serviço', value: categories.find(c => c.id === values.categoryId)?.name },
-                        { label: 'Profissional', value: professionals.find(p => p.id === values.professionalId)?.name },
-                        { label: 'Data', value: values.date && format(new Date(values.date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) },
-                        { label: 'Horário', value: values.time },
+                        { label: 'Nome', value: clientName },
+                        { label: 'WhatsApp', value: clientPhone },
+                        { label: 'Serviço', value: categories.find(c => c.id === categoryId)?.name },
+                        { label: 'Profissional', value: professionals.find(p => p.id === professionalId)?.name },
+                        { label: 'Data', value: date && format(new Date(date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) },
+                        { label: 'Horário', value: time },
                       ].map((item) => (
                         <div key={item.label} className="flex items-center justify-between">
                           <span className="text-sm text-zinc-500">{item.label}</span>

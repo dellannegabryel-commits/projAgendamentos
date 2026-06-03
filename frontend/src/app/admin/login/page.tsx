@@ -38,7 +38,7 @@ export default function AdminLoginPage() {
 
       localStorage.setItem('@agendafacil:token', token);
       localStorage.setItem('@agendafacil:user', JSON.stringify(admin));
-      document.cookie = `agendafacil_token=${token}; path=/; max-age=86400`;
+      document.cookie = `agendafacil_token=${token}; path=/; max-age=86400; SameSite=Lax`;
 
       toast.success('Login realizado com sucesso!');
       router.push('/admin');

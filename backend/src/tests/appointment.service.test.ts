@@ -8,6 +8,7 @@ const mockAppointmentRepo = vi.hoisted(() => ({
   findByProfessionalAndDate: vi.fn(),
   create: vi.fn(),
   updateStatus: vi.fn(),
+  updateStatusWhere: vi.fn(),
   delete: vi.fn(),
 }));
 
@@ -83,6 +84,30 @@ describe('AppointmentService', () => {
       expect(mockAppointmentRepo.create).toHaveBeenCalledOnce();
     });
 
+    it('deve aceitar telefone com mascara e armazenar somente digitos', async () => {
+      const maskedInput = { ...validInput, clientPhone: '(11) 99999-9999' };
+      mockAvailabilityRepo.findByProfessionalId.mockResolvedValue([
+        { dayOfWeek: 5, startTime: '08:00', endTime: '18:00' },
+      ]);
+      mockAppointmentRepo.findByProfessionalAndDate.mockResolvedValue(null);
+      mockAppointmentRepo.create.mockResolvedValue({
+        id: '1',
+        ...maskedInput,
+        date: new Date(maskedInput.date),
+        status: 'PENDING',
+      });
+
+      await service.create(maskedInput);
+      expect(mockAppointmentRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ clientPhone: '11999999999' })
+      );
+    });
+
+    it('deve rejeitar data inválida', async () => {
+      const badInput = { ...validInput, date: 'nao-e-data' };
+      await expect(service.create(badInput)).rejects.toThrow();
+    });
+
     it('deve rejeitar data no passado', async () => {
       const pastInput = { ...validInput, date: '2020-01-01T10:00:00.000Z' };
       await expect(service.create(pastInput)).rejects.toThrow('A data do agendamento deve ser no futuro');
@@ -125,8 +150,8 @@ describe('AppointmentService', () => {
         clientPhone: '11999999999',
       };
 
-      mockAppointmentRepo.findById.mockResolvedValue(appointment);
-      mockAppointmentRepo.updateStatus.mockResolvedValue({ ...appointment, status: AppointmentStatus.CONFIRMED });
+      mockAppointmentRepo.findById.mockResolvedValue({ ...appointment, status: AppointmentStatus.CONFIRMED });
+      mockAppointmentRepo.updateStatusWhere.mockResolvedValue(1);
       mockProfessionalRepo.findById.mockResolvedValue({ name: 'Dr. Smith', address: 'Rua A' });
 
       const result = await service.confirm('1');
@@ -137,7 +162,9 @@ describe('AppointmentService', () => {
       mockAppointmentRepo.findById.mockResolvedValue({
         id: '1',
         status: AppointmentStatus.CONFIRMED,
+        date: futureDate,
       });
+      mockAppointmentRepo.updateStatusWhere.mockResolvedValue(0);
 
       await expect(service.confirm('1')).rejects.toThrow('Apenas agendamentos pendentes podem ser confirmados');
     });
@@ -154,8 +181,8 @@ describe('AppointmentService', () => {
         clientPhone: '11999999999',
       };
 
-      mockAppointmentRepo.findById.mockResolvedValue(appointment);
-      mockAppointmentRepo.updateStatus.mockResolvedValue({ ...appointment, status: AppointmentStatus.CANCELLED });
+      mockAppointmentRepo.findById.mockResolvedValueOnce(appointment).mockResolvedValueOnce({ ...appointment, status: AppointmentStatus.CANCELLED });
+      mockAppointmentRepo.updateStatusWhere.mockResolvedValue(1);
       mockProfessionalRepo.findById.mockResolvedValue({ name: 'Dr. Smith' });
 
       const result = await service.cancel('1');

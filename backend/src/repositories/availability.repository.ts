@@ -17,7 +17,7 @@ export class AvailabilityRepository {
   }
 
   async findById(id: string): Promise<Availability | null> {
-    return prisma.availability.findUnique({ where: { id } });
+    return prisma.availability.findFirst({ where: { id, isActive: true } });
   }
 
   async create(data: Prisma.AvailabilityCreateInput): Promise<Availability> {

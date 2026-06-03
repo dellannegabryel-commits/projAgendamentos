@@ -1,20 +1,20 @@
 import { AppointmentService } from '../services/index.js';
 import { AppointmentStatus } from '@prisma/client';
 import { Request, Response, NextFunction } from 'express';
+import { z } from 'zod';
 
 export class AppointmentController {
   private service = new AppointmentService();
 
   async findAll(req: Request, res: Response, next: NextFunction) {
     try {
-      const { status, professionalId, dateFrom, dateTo } = req.query;
-      
-      const filters = {
-        status: status as AppointmentStatus | undefined,
-        professionalId: professionalId as string | undefined,
-        dateFrom: dateFrom as string | undefined,
-        dateTo: dateTo as string | undefined
-      };
+      const querySchema = z.object({
+        status: z.nativeEnum(AppointmentStatus).optional(),
+        professionalId: z.string().uuid().optional(),
+        dateFrom: z.string().refine(d => !isNaN(new Date(d).getTime()), 'Data inicial inválida').optional(),
+        dateTo: z.string().refine(d => !isNaN(new Date(d).getTime()), 'Data final inválida').optional(),
+      });
+      const filters = querySchema.parse(req.query);
       
       const appointments = await this.service.findAll(filters);
       res.json(appointments);
