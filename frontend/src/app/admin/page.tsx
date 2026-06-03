@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { CardSkeleton } from '@/components/feedback/Skeleton';
 import { api } from '@/lib/api';
 import type { Appointment } from '@/lib/api';
+import { formatPhone, stripPhone } from '@/lib/phone';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -73,10 +74,11 @@ export default function AdminPage() {
   const filteredAppointments = useMemo(() => {
     if (!search.trim()) return appointments;
     const q = search.toLowerCase();
+    const qDigits = stripPhone(search);
     return appointments.filter(
       (a) =>
         a.clientName.toLowerCase().includes(q) ||
-        a.clientPhone.includes(q) ||
+        stripPhone(a.clientPhone).includes(qDigits) ||
         a.professional.name.toLowerCase().includes(q)
     );
   }, [appointments, search]);
@@ -236,7 +238,7 @@ export default function AdminPage() {
                         <tr key={appointment.id} className="hover:bg-zinc-50 transition-colors">
                           <td className="px-6 py-4">
                             <div className="text-sm font-medium text-zinc-900">{appointment.clientName}</div>
-                            <div className="text-sm text-zinc-500">{appointment.clientPhone}</div>
+                            <div className="text-sm text-zinc-500">{formatPhone(appointment.clientPhone)}</div>
                           </td>
                           <td className="px-6 py-4">
                             <div className="text-sm text-zinc-900">{appointment.professional.name}</div>

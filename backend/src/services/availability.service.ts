@@ -5,8 +5,10 @@ import { z } from 'zod';
 const availabilitySchema = z.object({
   professionalId: z.string().uuid('ID do profissional inválido'),
   dayOfWeek: z.number().min(0).max(6, 'Dia da semana deve ser 0-6'),
-  startTime: z.string().regex(/^\d{2}:\d{2}$/, 'Formato deve ser HH:MM'),
-  endTime: z.string().regex(/^\d{2}:\d{2}$/, 'Formato deve ser HH:MM')
+  startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Horário deve ser HH:MM válido'),
+  endTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Horário deve ser HH:MM válido')
+}).refine(d => d.startTime < d.endTime, {
+  message: 'startTime deve ser menor que endTime'
 });
 
 export type CreateAvailabilityInput = z.infer<typeof availabilitySchema>;
@@ -70,9 +72,11 @@ export class AvailabilityService {
       dateTo: dateEnd
     });
 
-    const bookedTimes = appointments
-      .filter(a => a.status !== AppointmentStatus.CANCELLED)
-      .map(a => this.formatTime(a.date));
+    const bookedSet = new Set(
+      appointments
+        .filter(a => a.status !== AppointmentStatus.CANCELLED)
+        .map(a => this.formatTime(a.date))
+    );
 
     const slots: TimeSlot[] = [];
 
@@ -81,7 +85,7 @@ export class AvailabilityService {
       for (const slot of availSlots) {
         slots.push({
           time: slot,
-          available: !bookedTimes.includes(slot)
+          available: !bookedSet.has(slot)
         });
       }
     }
