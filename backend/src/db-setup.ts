@@ -8,7 +8,18 @@ async function main() {
     ON "Appointment"("professionalId", "date")
     WHERE status <> 'CANCELLED'
   `);
-  console.log('Partial unique index created/verified');
+
+  await prisma.$executeRawUnsafe(`
+    ALTER TABLE "Availability" DROP CONSTRAINT IF EXISTS "Availability_professionalId_dayOfWeek_startTime_key"
+  `);
+
+  await prisma.$executeRawUnsafe(`
+    CREATE UNIQUE INDEX IF NOT EXISTS "availability_active_slot"
+    ON "Availability"("professionalId", "dayOfWeek", "startTime")
+    WHERE "isActive" = true
+  `);
+
+  console.log('Partial unique indexes created/verified');
 }
 
 main()
