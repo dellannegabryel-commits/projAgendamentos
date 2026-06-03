@@ -37,6 +37,8 @@ jobs:
 
       - run: npm ci
       - run: npx prisma validate
+        env:
+          DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
       - run: npx prisma generate
       - run: npm run lint
       - run: npm run build
@@ -70,5 +72,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - run: docker compose build
+      - run: docker compose --env-file .env.ci build
 
