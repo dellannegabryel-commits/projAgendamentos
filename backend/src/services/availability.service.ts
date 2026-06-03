@@ -1,6 +1,7 @@
 import { AvailabilityRepository, AppointmentRepository } from '../repositories/index.js';
 import { AppointmentStatus, Prisma } from '@prisma/client';
 import { ConflictError } from '../shared/errors/index.js';
+import { getDayOfWeekInBRT, formatTimeInBRT } from '../shared/timezone/index.js';
 import { z } from 'zod';
 
 const availabilitySchema = z.object({
@@ -76,9 +77,9 @@ export class AvailabilityService {
   }
 
   async getAvailableSlots(professionalId: string, date: Date) {
-    const dayOfWeek = date.getUTCDay();
+    const dayOfWeek = getDayOfWeekInBRT(date);
     const availabilities = await this.availabilityRepo.findByProfessionalId(professionalId);
-    
+
     const dayAvailabilities = availabilities.filter(a => a.dayOfWeek === dayOfWeek);
     if (dayAvailabilities.length === 0) return [];
 
@@ -96,7 +97,7 @@ export class AvailabilityService {
     const bookedSet = new Set(
       appointments
         .filter(a => a.status !== AppointmentStatus.CANCELLED)
-        .map(a => this.formatTime(a.date))
+        .map(a => formatTimeInBRT(a.date))
     );
 
     const slots: TimeSlot[] = [];
@@ -112,12 +113,6 @@ export class AvailabilityService {
     }
 
     return slots.sort((a, b) => a.time.localeCompare(b.time));
-  }
-
-  private formatTime(date: Date): string {
-    const hours = date.getUTCHours().toString().padStart(2, '0');
-    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
-    return `${hours}:${minutes}`;
   }
 
   private generateTimeSlots(start: string, end: string): string[] {

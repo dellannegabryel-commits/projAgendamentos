@@ -57,7 +57,7 @@ model Appointment {
   professional   Professional        @relation(fields: [professionalId], references: [id])
   clientName     String
   clientPhone    String
-  date          DateTime
+  date          DateTime          @db.Timestamptz(3)
   status        AppointmentStatus  @default(PENDING)
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
