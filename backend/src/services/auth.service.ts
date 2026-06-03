@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { AdminRepository } from '../repositories/admin.repository.js';
+import { getAppConfig } from '../config/index.js';
 import { z } from 'zod';
 
 const loginSchema = z.object({
@@ -28,9 +29,10 @@ export class AuthService {
       throw new Error('Credenciais inválidas');
     }
 
+    const config = getAppConfig();
     const token = jwt.sign(
       { id: admin.id, email: admin.email },
-      process.env.JWT_SECRET || 'fallback-secret-key-change-me',
+      config.jwtSecret,
       { expiresIn: '1d' }
     );
 
