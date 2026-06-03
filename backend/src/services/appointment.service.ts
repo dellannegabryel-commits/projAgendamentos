@@ -13,7 +13,7 @@ const appointmentSchema = z.object({
   date: z.string().transform(str => new Date(str))
 });
 
-export type CreateAppointmentInput = z.infer<typeof appointmentSchema>;
+export type CreateAppointmentInput = z.input<typeof appointmentSchema>;
 
 export class AppointmentService {
   private appointmentRepo = new AppointmentRepository();
