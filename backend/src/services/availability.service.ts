@@ -1,12 +1,16 @@
 import { AvailabilityRepository, AppointmentRepository } from '../repositories/index.js';
-import { AppointmentStatus } from '@prisma/client';
+import { AppointmentStatus, Prisma } from '@prisma/client';
+import { ConflictError } from '../shared/errors/index.js';
+import { getDayOfWeekInBRT, formatTimeInBRT } from '../shared/timezone/index.js';
 import { z } from 'zod';
 
 const availabilitySchema = z.object({
   professionalId: z.string().uuid('ID do profissional inválido'),
   dayOfWeek: z.number().min(0).max(6, 'Dia da semana deve ser 0-6'),
-  startTime: z.string().regex(/^\d{2}:\d{2}$/, 'Formato deve ser HH:MM'),
-  endTime: z.string().regex(/^\d{2}:\d{2}$/, 'Formato deve ser HH:MM')
+  startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Horário deve ser HH:MM válido'),
+  endTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Horário deve ser HH:MM válido')
+}).refine(d => d.startTime < d.endTime, {
+  message: 'startTime deve ser menor que endTime'
 });
 
 export type CreateAvailabilityInput = z.infer<typeof availabilitySchema>;
@@ -31,12 +35,22 @@ export class AvailabilityService {
 
   async create(data: CreateAvailabilityInput) {
     const parsed = availabilitySchema.parse(data);
-    return this.availabilityRepo.create({
-      dayOfWeek: parsed.dayOfWeek,
-      startTime: parsed.startTime,
-      endTime: parsed.endTime,
-      professional: { connect: { id: parsed.professionalId } }
-    });
+    try {
+      return await this.availabilityRepo.create({
+        dayOfWeek: parsed.dayOfWeek,
+        startTime: parsed.startTime,
+        endTime: parsed.endTime,
+        professional: { connect: { id: parsed.professionalId } }
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        throw new ConflictError(
+          'Já existe um horário com este início para este profissional neste dia',
+          'DUPLICATE_AVAILABILITY'
+        );
+      }
+      throw err;
+    }
   }
 
   async update(id: string, data: UpdateAvailabilityInput) {
@@ -45,7 +59,17 @@ export class AvailabilityService {
       updateData.professional = { connect: { id: data.professionalId } };
       delete updateData.professionalId;
     }
-    return this.availabilityRepo.update(id, updateData);
+    try {
+      return await this.availabilityRepo.update(id, updateData);
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        throw new ConflictError(
+          'Já existe um horário com este início para este profissional neste dia',
+          'DUPLICATE_AVAILABILITY'
+        );
+      }
+      throw err;
+    }
   }
 
   async delete(id: string) {
@@ -53,9 +77,9 @@ export class AvailabilityService {
   }
 
   async getAvailableSlots(professionalId: string, date: Date) {
-    const dayOfWeek = date.getUTCDay();
+    const dayOfWeek = getDayOfWeekInBRT(date);
     const availabilities = await this.availabilityRepo.findByProfessionalId(professionalId);
-    
+
     const dayAvailabilities = availabilities.filter(a => a.dayOfWeek === dayOfWeek);
     if (dayAvailabilities.length === 0) return [];
 
@@ -70,9 +94,11 @@ export class AvailabilityService {
       dateTo: dateEnd
     });
 
-    const bookedTimes = appointments
-      .filter(a => a.status !== AppointmentStatus.CANCELLED)
-      .map(a => this.formatTime(a.date));
+    const bookedSet = new Set(
+      appointments
+        .filter(a => a.status !== AppointmentStatus.CANCELLED)
+        .map(a => formatTimeInBRT(a.date))
+    );
 
     const slots: TimeSlot[] = [];
 
@@ -81,18 +107,12 @@ export class AvailabilityService {
       for (const slot of availSlots) {
         slots.push({
           time: slot,
-          available: !bookedTimes.includes(slot)
+          available: !bookedSet.has(slot)
         });
       }
     }
 
     return slots.sort((a, b) => a.time.localeCompare(b.time));
-  }
-
-  private formatTime(date: Date): string {
-    const hours = date.getUTCHours().toString().padStart(2, '0');
-    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
-    return `${hours}:${minutes}`;
   }
 
   private generateTimeSlots(start: string, end: string): string[] {

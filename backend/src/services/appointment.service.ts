@@ -1,16 +1,26 @@
 import { AppointmentRepository, ProfessionalRepository, AvailabilityRepository } from '../repositories/index.js';
-import { AppointmentStatus } from '@prisma/client';
+import { AppointmentStatus, Prisma } from '@prisma/client';
 import { WhatsAppService } from './whatsapp.service.js';
 import { NotFoundError, ConflictError, AppError } from '../shared/errors/index.js';
 import { logger } from '../shared/logger/index.js';
+import { getDayOfWeekInBRT, formatTimeInBRT, formatDateInBRT } from '../shared/timezone/index.js';
 import { z } from 'zod';
-import { format } from 'date-fns';
+
+const isoDateTime = z.string()
+  .refine(
+    s => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:?\d{2})$/.test(s),
+    'Data deve estar no formato ISO 8601 com fuso horário (ex: 2026-12-15T10:00:00-03:00 ou 2026-12-15T13:00:00.000Z)'
+  )
+  .transform(s => new Date(s))
+  .refine(d => !isNaN(d.getTime()), 'Data inválida');
 
 const appointmentSchema = z.object({
   professionalId: z.string().uuid('ID do profissional inválido'),
   clientName: z.string().min(1, 'Nome do cliente é obrigatório'),
-  clientPhone: z.string().min(10, 'Telefone inválido'),
-  date: z.string().transform(str => new Date(str))
+  clientPhone: z.string()
+    .transform(s => s.replace(/\D/g, ''))
+    .pipe(z.string().regex(/^\d{10,11}$/, 'Telefone inválido')),
+  date: isoDateTime
 });
 
 export type CreateAppointmentInput = z.input<typeof appointmentSchema>;
@@ -42,12 +52,12 @@ export class AppointmentService {
     const parsed = appointmentSchema.parse(data);
     const now = new Date();
 
-    if (parsed.date <= now) {
+    if (parsed.date < now) {
       throw new AppError('A data do agendamento deve ser no futuro', 'PAST_DATE');
     }
 
-    const dayOfWeek = parsed.date.getUTCDay();
-    const timeStr = this.formatTime(parsed.date);
+    const dayOfWeek = getDayOfWeekInBRT(parsed.date);
+    const timeStr = formatTimeInBRT(parsed.date);
 
     const availabilities = await this.availabilityRepo.findByProfessionalId(parsed.professionalId);
     const dayAvailabilities = availabilities.filter(a => a.dayOfWeek === dayOfWeek);
@@ -73,50 +83,61 @@ export class AppointmentService {
       throw new ConflictError('Horário já está agendado', 'SLOT_UNAVAILABLE');
     }
 
-    return this.appointmentRepo.create({
-      professional: { connect: { id: parsed.professionalId } },
-      clientName: parsed.clientName,
-      clientPhone: parsed.clientPhone,
-      date: parsed.date,
-      status: AppointmentStatus.PENDING
-    });
-  }
-
-  private formatTime(date: Date): string {
-    const hours = date.getUTCHours().toString().padStart(2, '0');
-    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
-    return `${hours}:${minutes}`;
+    try {
+      return await this.appointmentRepo.create({
+        professional: { connect: { id: parsed.professionalId } },
+        clientName: parsed.clientName,
+        clientPhone: parsed.clientPhone,
+        date: parsed.date,
+        status: AppointmentStatus.PENDING
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        throw new ConflictError('Horário já está agendado', 'SLOT_UNAVAILABLE');
+      }
+      throw err;
+    }
   }
 
   async confirm(id: string) {
-    const appointment = await this.findById(id);
-    
-    if (appointment.status !== AppointmentStatus.PENDING) {
-      throw new AppError('Apenas agendamentos pendentes podem ser confirmados', 'INVALID_STATUS');
+    const count = await this.appointmentRepo.updateStatusWhere(
+      { id, status: AppointmentStatus.PENDING },
+      AppointmentStatus.CONFIRMED
+    );
+
+    if (count === 0) {
+      const appointment = await this.findById(id);
+      if (appointment.status !== AppointmentStatus.PENDING) {
+        throw new AppError('Apenas agendamentos pendentes podem ser confirmados', 'INVALID_STATUS');
+      }
+      throw new NotFoundError('Agendamento não encontrado');
     }
 
-    const updated = await this.appointmentRepo.updateStatus(id, AppointmentStatus.CONFIRMED);
-    
+    const appointment = await this.findById(id);
     const professional = await this.professionalRepo.findById(appointment.professionalId);
-    
     await this.sendConfirmationMessage(appointment, professional!);
-    
-    return updated;
+    return appointment;
   }
 
   async cancel(id: string) {
     const appointment = await this.findById(id);
-    
+
     if (appointment.status === AppointmentStatus.CANCELLED) {
       throw new AppError('Agendamento já está cancelado', 'ALREADY_CANCELLED');
     }
 
-    const updated = await this.appointmentRepo.updateStatus(id, AppointmentStatus.CANCELLED);
+    const count = await this.appointmentRepo.updateStatusWhere(
+      { id, status: appointment.status },
+      AppointmentStatus.CANCELLED
+    );
 
-    const professional = await this.professionalRepo.findById(appointment.professionalId);
+    if (count === 0) {
+      throw new AppError('Agendamento já foi modificado por outro usuário', 'CONCURRENT_MODIFICATION');
+    }
 
-    await this.sendCancellationMessage(appointment, professional!);
-
+    const updated = await this.findById(id);
+    const professional = await this.professionalRepo.findById(updated.professionalId);
+    await this.sendCancellationMessage(updated, professional!);
     return updated;
   }
 
@@ -132,9 +153,9 @@ export class AppointmentService {
 
   private async sendConfirmationMessage(appointment: any, professional: any) {
     const date = new Date(appointment.date);
-    const formattedDate = format(date, 'dd/MM/yyyy');
-    const formattedTime = format(date, 'HH:mm');
-    
+    const formattedDate = formatDateInBRT(date);
+    const formattedTime = formatTimeInBRT(date);
+
     const message = `Olá ${appointment.clientName}, seu agendamento com ${professional.name} foi CONFIRMADO!
 📅 Data: ${formattedDate}
 🕒 Hora: ${formattedTime}
@@ -152,8 +173,8 @@ Local: ${professional.address}`;
 
   private async sendCancellationMessage(appointment: any, professional: any) {
     const date = new Date(appointment.date);
-    const formattedDate = format(date, 'dd/MM/yyyy');
-    const formattedTime = format(date, 'HH:mm');
+    const formattedDate = formatDateInBRT(date);
+    const formattedTime = formatTimeInBRT(date);
 
     const message = `Olá ${appointment.clientName}, seu agendamento com ${professional.name} foi CANCELADO.
 📅 Data: ${formattedDate}

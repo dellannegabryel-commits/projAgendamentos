@@ -16,6 +16,14 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
     ...options,
   });
 
+  if (response.status === 401 && typeof window !== 'undefined') {
+    localStorage.removeItem('@agendafacil:token');
+    localStorage.removeItem('@agendafacil:user');
+    document.cookie = 'agendafacil_token=; path=/; max-age=0';
+    window.location.href = '/admin/login';
+    throw new Error('Sessão expirada');
+  }
+
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
     throw new Error(error.error || 'Erro na requisição');
@@ -79,7 +87,7 @@ export const api = {
   },
 
   categories: {
-    list: () => fetchApi<Category[]>('/categories'),
+    list: (options?: RequestInit) => fetchApi<Category[]>('/categories', options),
     get: (id: string) => fetchApi<Category>(`/categories/${id}`),
     create: (data: { name: string; description?: string }) =>
       fetchApi<Category>('/categories', { method: 'POST', body: JSON.stringify(data) }),
@@ -90,7 +98,7 @@ export const api = {
 
   professionals: {
     list: () => fetchApi<Professional[]>('/professionals'),
-    getByCategory: (categoryId: string) => fetchApi<Professional[]>(`/professionals/category/${categoryId}`),
+    getByCategory: (categoryId: string, options?: RequestInit) => fetchApi<Professional[]>(`/professionals/category/${categoryId}`, options),
     get: (id: string) => fetchApi<Professional>(`/professionals/${id}`),
     create: (data: Omit<Professional, 'id' | 'category'>) =>
       fetchApi<Professional>('/professionals', { method: 'POST', body: JSON.stringify(data) }),
@@ -101,9 +109,9 @@ export const api = {
 
   availabilities: {
     list: () => fetchApi<Availability[]>('/availabilities'),
-    getByProfessional: (professionalId: string) => fetchApi<Availability[]>(`/availabilities/professional/${professionalId}`),
-    getSlots: (professionalId: string, date: string) =>
-      fetchApi<TimeSlot[]>(`/availabilities/slots?professionalId=${professionalId}&date=${date}`),
+    getByProfessional: (professionalId: string, options?: RequestInit) => fetchApi<Availability[]>(`/availabilities/professional/${professionalId}`, options),
+    getSlots: (professionalId: string, date: string, options?: RequestInit) =>
+      fetchApi<TimeSlot[]>(`/availabilities/slots?professionalId=${professionalId}&date=${date}`, options),
     create: (data: Omit<Availability, 'id' | 'professional'>) =>
       fetchApi<Availability>('/availabilities', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: Partial<Omit<Availability, 'id' | 'professional'>>) =>

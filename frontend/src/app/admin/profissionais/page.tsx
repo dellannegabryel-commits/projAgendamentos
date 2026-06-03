@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { FormField } from '@/components/forms/FormField';
 import { api, Professional, Category } from '@/lib/api';
+import { maskPhone } from '@/lib/phone';
 
 export default function ProfessionalsPage() {
   const [professionals, setProfessionals] = useState<Professional[]>([]);
@@ -145,7 +146,7 @@ export default function ProfessionalsPage() {
             <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required placeholder="Nome completo" />
           </FormField>
           <FormField label="Telefone" required>
-            <Input value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} required placeholder="(63) 99999-9999" />
+            <Input value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: maskPhone(e.target.value) })} required placeholder="(63) 99999-9999" inputMode="numeric" />
           </FormField>
           <FormField label="Endereço" required>
             <Input value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} required placeholder="Rua, número, bairro" />

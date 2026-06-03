@@ -1,4 +1,5 @@
 localdocs
+docs/
 node_modules
 .env
 .next

@@ -35,8 +35,13 @@ export class WhatsAppService {
 
   private formatPhone(phone: string): string {
     const digits = phone.replace(/\D/g, '');
-    if (digits.length === 10) return `55${digits}@s.whatsapp.net`;
-    if (digits.length === 11) return `55${digits}@s.whatsapp.net`;
+    if (digits.length === 10 || digits.length === 11) {
+      const ddd = digits.slice(0, 2);
+      if (ddd.startsWith('0') || ddd.startsWith('1')) {
+        throw new Error(`DDD inválido: ${ddd}`);
+      }
+      return `55${digits}@s.whatsapp.net`;
+    }
     return phone;
   }
 }

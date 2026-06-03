@@ -44,11 +44,11 @@ model Availability {
   dayOfWeek      Int
   startTime      String
   endTime        String
-  isActive       Boolean      @default(true)
+  isActive       Boolean       @default(true)
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  @@unique([professionalId, dayOfWeek, startTime])
+  @@index([isActive])
 }
 
 model Appointment {
@@ -57,7 +57,7 @@ model Appointment {
   professional   Professional        @relation(fields: [professionalId], references: [id])
   clientName     String
   clientPhone    String
-  date          DateTime
+  date          DateTime          @db.Timestamptz(3)
   status        AppointmentStatus  @default(PENDING)
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt

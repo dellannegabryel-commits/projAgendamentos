@@ -4,7 +4,9 @@ import { z } from 'zod';
 
 const professionalSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
-  phone: z.string().min(1, 'Telefone é obrigatório'),
+  phone: z.string()
+    .transform(s => s.replace(/\D/g, ''))
+    .pipe(z.string().regex(/^\d{10,11}$/, 'Telefone inválido')),
   categoryId: z.string().uuid('ID da categoria inválido'),
   address: z.string().optional().default('')
 });

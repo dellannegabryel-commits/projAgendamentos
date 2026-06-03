@@ -20,7 +20,7 @@ export async function checkDatabase(): Promise<boolean> {
 export async function checkEvolution(): Promise<boolean> {
   try {
     const config = getEvolutionConfig();
-    await axios.get(`${config.apiUrl}/health`, {
+    await axios.get(`${config.apiUrl}/manager/health`, {
       headers: { 'apikey': config.apiKey },
       timeout: 5000,
     });
