@@ -1,4 +1,5 @@
 import { CategoryRepository } from '../repositories/index.js';
+import { NotFoundError } from '../shared/errors/index.js';
 import { z } from 'zod';
 
 const categorySchema = z.object({
@@ -18,7 +19,7 @@ export class CategoryService {
 
   async findById(id: string) {
     const category = await this.repository.findById(id);
-    if (!category) throw new Error('Categoria não encontrada');
+    if (!category) throw new NotFoundError('Categoria não encontrada');
     return category;
   }
 

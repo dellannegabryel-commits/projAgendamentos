@@ -1,6 +1,7 @@
 import { AppointmentRepository, ProfessionalRepository } from '../repositories/index.js';
 import { AppointmentStatus } from '@prisma/client';
 import { WhatsAppService } from './whatsapp.service.js';
+import { NotFoundError, ConflictError, AppError } from '../shared/errors/index.js';
 import { z } from 'zod';
 import { format } from 'date-fns';
 
@@ -31,7 +32,7 @@ export class AppointmentService {
 
   async findById(id: string) {
     const appointment = await this.appointmentRepo.findById(id);
-    if (!appointment) throw new Error('Agendamento não encontrado');
+    if (!appointment) throw new NotFoundError('Agendamento não encontrado');
     return appointment;
   }
 
@@ -44,7 +45,7 @@ export class AppointmentService {
     );
     
     if (existing && existing.status !== AppointmentStatus.CANCELLED) {
-      throw new Error('Horário já está agendado');
+      throw new ConflictError('Horário já está agendado', 'SLOT_UNAVAILABLE');
     }
 
     return this.appointmentRepo.create({
@@ -60,7 +61,7 @@ export class AppointmentService {
     const appointment = await this.findById(id);
     
     if (appointment.status !== AppointmentStatus.PENDING) {
-      throw new Error('Apenas agendamentos pendentes podem ser confirmados');
+      throw new AppError('Apenas agendamentos pendentes podem ser confirmados', 'INVALID_STATUS');
     }
 
     const updated = await this.appointmentRepo.updateStatus(id, AppointmentStatus.CONFIRMED);
@@ -76,7 +77,7 @@ export class AppointmentService {
     const appointment = await this.findById(id);
     
     if (appointment.status === AppointmentStatus.CANCELLED) {
-      throw new Error('Agendamento já está cancelado');
+      throw new AppError('Agendamento já está cancelado', 'ALREADY_CANCELLED');
     }
 
     const updated = await this.appointmentRepo.updateStatus(id, AppointmentStatus.CANCELLED);
@@ -92,7 +93,7 @@ export class AppointmentService {
     const appointment = await this.findById(id);
 
     if (appointment.status !== AppointmentStatus.CANCELLED) {
-      throw new Error('Apenas agendamentos cancelados podem ser excluídos');
+      throw new AppError('Apenas agendamentos cancelados podem ser excluídos', 'INVALID_STATUS');
     }
 
     await this.appointmentRepo.delete(id);

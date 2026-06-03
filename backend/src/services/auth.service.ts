@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { AdminRepository } from '../repositories/admin.repository.js';
 import { getAppConfig } from '../config/index.js';
+import { NotFoundError, UnauthorizedError } from '../shared/errors/index.js';
 import { z } from 'zod';
 
 const loginSchema = z.object({
@@ -21,12 +22,12 @@ export class AuthService {
 
     const admin = await this.adminRepository.findByEmail(email);
     if (!admin) {
-      throw new Error('Credenciais inválidas');
+      throw new UnauthorizedError('Credenciais inválidas');
     }
 
     const isValidPassword = await bcrypt.compare(password, admin.password);
     if (!isValidPassword) {
-      throw new Error('Credenciais inválidas');
+      throw new UnauthorizedError('Credenciais inválidas');
     }
 
     const config = getAppConfig();
@@ -49,7 +50,7 @@ export class AuthService {
   async getMe(id: string) {
     const admin = await this.adminRepository.findById(id);
     if (!admin) {
-      throw new Error('Admin não encontrado');
+      throw new NotFoundError('Admin não encontrado');
     }
 
     return {
