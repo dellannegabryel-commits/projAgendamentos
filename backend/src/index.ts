@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import routes from './routes/index.js';
+import healthRoutes from './routes/health.routes.js';
 import { loadEnv, getAppConfig } from './config/index.js';
 import { logger, requestLogger, logError } from './shared/logger/index.js';
 import { AppError } from './shared/errors/index.js';
@@ -16,6 +17,7 @@ const config = getAppConfig();
 app.use(cors());
 app.use(express.json());
 app.use(requestLogger);
+app.use('/health', healthRoutes);
 app.use('/api', routes);
 
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
