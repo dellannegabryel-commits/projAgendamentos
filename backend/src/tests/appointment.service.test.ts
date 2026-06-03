@@ -113,12 +113,52 @@ describe('AppointmentService', () => {
       await expect(service.create(pastInput)).rejects.toThrow('A data do agendamento deve ser no futuro');
     });
 
+    it('deve aceitar ISO 8601 com offset -03:00 (BRT)', async () => {
+      const brtInput = { ...validInput, date: '2027-01-15T11:00:00-03:00' };
+      mockAvailabilityRepo.findByProfessionalId.mockResolvedValue([
+        { dayOfWeek: 5, startTime: '08:00', endTime: '18:00' },
+      ]);
+      mockAppointmentRepo.findByProfessionalAndDate.mockResolvedValue(null);
+      mockAppointmentRepo.create.mockResolvedValue({
+        id: '1',
+        ...brtInput,
+        date: new Date(brtInput.date),
+        status: 'PENDING',
+      });
+
+      const result = await service.create(brtInput);
+      expect(result.status).toBe(AppointmentStatus.PENDING);
+    });
+
+    it('deve rejeitar ISO 8601 sem fuso horário', async () => {
+      const noTzInput = { ...validInput, date: '2027-01-15T11:00:00' };
+      await expect(service.create(noTzInput)).rejects.toThrow(/fuso/i);
+    });
+
+    it('deve interpretar dia da semana em BRT (22:00 BRT quinta = 01:00 UTC sexta)', async () => {
+      const lateNightInput = { ...validInput, date: '2027-01-14T22:00:00-03:00' };
+      mockAvailabilityRepo.findByProfessionalId.mockResolvedValue([
+        { dayOfWeek: 4, startTime: '20:00', endTime: '23:00' },
+      ]);
+      mockAppointmentRepo.findByProfessionalAndDate.mockResolvedValue(null);
+      mockAppointmentRepo.create.mockResolvedValue({
+        id: '1',
+        ...lateNightInput,
+        date: new Date(lateNightInput.date),
+        status: 'PENDING',
+      });
+
+      const result = await service.create(lateNightInput);
+      expect(result.status).toBe(AppointmentStatus.PENDING);
+    });
+
     it('deve rejeitar horário fora da disponibilidade', async () => {
       mockAvailabilityRepo.findByProfessionalId.mockResolvedValue([
         { dayOfWeek: 5, startTime: '08:00', endTime: '12:00' },
       ]);
+      const lateInput = { ...validInput, date: '2027-01-15T16:00:00-03:00' };
 
-      await expect(service.create(validInput)).rejects.toThrow('Horário fora da disponibilidade');
+      await expect(service.create(lateInput)).rejects.toThrow('Horário fora da disponibilidade');
     });
 
     it('deve rejeitar dia sem disponibilidade', async () => {

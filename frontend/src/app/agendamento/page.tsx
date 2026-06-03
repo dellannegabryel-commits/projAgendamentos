@@ -196,7 +196,7 @@ export default function AgendamentoPage() {
         professionalId,
         clientName,
         clientPhone: stripPhone(clientPhone),
-        date: `${date}T${time}:00`,
+        date: new Date(`${date}T${time}:00`).toISOString(),
       });
       setSuccess(true);
       toast.success('Agendamento confirmado com sucesso!');
@@ -432,7 +432,7 @@ export default function AgendamentoPage() {
                         { label: 'WhatsApp', value: clientPhone },
                         { label: 'Serviço', value: categories.find(c => c.id === categoryId)?.name },
                         { label: 'Profissional', value: professionals.find(p => p.id === professionalId)?.name },
-                        { label: 'Data', value: date && format(new Date(date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) },
+                        { label: 'Data', value: date && format(new Date(`${date}T00:00:00`), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) },
                         { label: 'Horário', value: time },
                       ].map((item) => (
                         <div key={item.label} className="flex items-center justify-between">
