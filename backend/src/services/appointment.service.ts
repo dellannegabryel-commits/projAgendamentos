@@ -2,6 +2,7 @@ import { AppointmentRepository, ProfessionalRepository } from '../repositories/i
 import { AppointmentStatus } from '@prisma/client';
 import { WhatsAppService } from './whatsapp.service.js';
 import { NotFoundError, ConflictError, AppError } from '../shared/errors/index.js';
+import { logger } from '../shared/logger/index.js';
 import { z } from 'zod';
 import { format } from 'date-fns';
 
@@ -115,7 +116,7 @@ Local: ${professional.address}`;
         text: message
       });
     } catch (error) {
-      console.error('Erro ao enviar WhatsApp:', error);
+      logger.error({ err: error }, 'Erro ao enviar WhatsApp');
     }
   }
 
@@ -135,7 +136,7 @@ Qualquer dúvida, entre em contato conosco.`;
         text: message
       });
     } catch (error) {
-      console.error('Erro ao enviar WhatsApp de cancelamento:', error);
+      logger.error({ err: error }, 'Erro ao enviar WhatsApp de cancelamento');
     }
   }
 }
