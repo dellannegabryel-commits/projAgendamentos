@@ -1,12 +1,18 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+const PUBLIC_ADMIN_PATHS = [
+  '/admin/login',
+  '/admin/setup',
+  '/admin/forgot-password',
+  '/admin/reset-password',
+];
+
 export function middleware(request: NextRequest) {
-  // Ignorar rotas públicas e recursos estáticos
   if (
     request.nextUrl.pathname.startsWith('/_next') ||
     request.nextUrl.pathname.startsWith('/api') ||
-    request.nextUrl.pathname === '/admin/login' ||
+    PUBLIC_ADMIN_PATHS.includes(request.nextUrl.pathname) ||
     !request.nextUrl.pathname.startsWith('/admin')
   ) {
     return NextResponse.next();

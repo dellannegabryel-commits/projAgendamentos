@@ -1,77 +1,60 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Lock, Mail, LogIn } from 'lucide-react';
+import { Lock, Mail, User, ShieldCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { toast } from 'sonner';
 import { Button, Input } from '@/components/ui';
 import { api } from '@/lib/api';
 
-const loginSchema = z.object({
+const setupSchema = z.object({
+  name: z.string().min(1, 'Nome é obrigatório').max(100),
   email: z.string().email('E-mail inválido'),
-  password: z.string().min(1, 'Senha é obrigatória'),
+  password: z.string().min(8, 'Senha deve ter no mínimo 8 caracteres'),
+  confirmPassword: z.string().min(8, 'Confirmação é obrigatória'),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'As senhas não coincidem',
+  path: ['confirmPassword'],
 });
 
-type LoginForm = z.infer<typeof loginSchema>;
+type SetupForm = z.infer<typeof setupSchema>;
 
-export default function AdminLoginPage() {
+export default function AdminSetupPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [checkingStatus, setCheckingStatus] = useState(true);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginForm>({
-    resolver: zodResolver(loginSchema),
+  } = useForm<SetupForm>({
+    resolver: zodResolver(setupSchema),
   });
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const status = await api.auth.status();
-        if (!cancelled && !status.hasAdmin) {
-          router.replace('/admin/setup');
-        }
-      } catch {
-      } finally {
-        if (!cancelled) setCheckingStatus(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [router]);
-
-  async function onSubmit(data: LoginForm) {
+  async function onSubmit(data: SetupForm) {
     setIsLoading(true);
     try {
-      const response = await api.auth.login(data);
+      const response = await api.auth.setup({
+        name: data.name,
+        email: data.email,
+        password: data.password,
+      });
       const { token, admin } = response;
 
       localStorage.setItem('@agendafacil:token', token);
       localStorage.setItem('@agendafacil:user', JSON.stringify(admin));
       document.cookie = `agendafacil_token=${token}; path=/; max-age=86400; SameSite=Lax`;
 
-      toast.success('Login realizado com sucesso!');
+      toast.success('Conta de administrador criada com sucesso!');
       router.push('/admin');
     } catch (error: any) {
-      toast.error(error.message || 'Erro ao realizar login. Verifique suas credenciais.');
+      toast.error(error.message || 'Erro ao criar conta. Tente novamente.');
     } finally {
       setIsLoading(false);
     }
-  }
-
-  if (checkingStatus) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-zinc-50">
-        <div className="text-zinc-500">Carregando...</div>
-      </div>
-    );
   }
 
   return (
@@ -79,22 +62,36 @@ export default function AdminLoginPage() {
       <div className="max-w-md w-full bg-white rounded-2xl shadow-lg border border-zinc-100 p-8 space-y-6">
         <div className="text-center space-y-2">
           <div className="w-14 h-14 rounded-2xl bg-primary-50 flex items-center justify-center mx-auto mb-4">
-            <LogIn className="h-7 w-7 text-primary-600" />
+            <ShieldCheck className="h-7 w-7 text-primary-600" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
-            Agenda Fácil
+            Configuração Inicial
           </h1>
           <p className="text-sm text-zinc-500">
-            Acesse o painel administrativo
+            Crie a conta de administrador do Agenda Fácil
           </p>
+        </div>
+
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800">
+          Esta tela só aparece na primeira inicialização. Após criar a conta, ela não ficará mais disponível.
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <Input
+            id="name"
+            type="text"
+            label="Nome completo"
+            placeholder="Seu nome"
+            error={errors.name?.message}
+            icon={<User className="h-5 w-5" />}
+            {...register('name')}
+          />
+
+          <Input
             id="email"
             type="email"
             label="E-mail"
-            placeholder="admin@agendafacil.com"
+            placeholder="admin@exemplo.com"
             error={errors.email?.message}
             icon={<Mail className="h-5 w-5" />}
             {...register('email')}
@@ -104,20 +101,21 @@ export default function AdminLoginPage() {
             id="password"
             type="password"
             label="Senha"
-            placeholder="••••••••"
+            placeholder="Mínimo 8 caracteres"
             error={errors.password?.message}
             icon={<Lock className="h-5 w-5" />}
             {...register('password')}
           />
 
-          <div className="flex justify-end">
-            <Link
-              href="/admin/forgot-password"
-              className="text-sm text-primary-600 hover:text-primary-700 transition-colors"
-            >
-              Esqueci minha senha
-            </Link>
-          </div>
+          <Input
+            id="confirmPassword"
+            type="password"
+            label="Confirmar senha"
+            placeholder="Digite a senha novamente"
+            error={errors.confirmPassword?.message}
+            icon={<Lock className="h-5 w-5" />}
+            {...register('confirmPassword')}
+          />
 
           <Button
             type="submit"
@@ -125,7 +123,7 @@ export default function AdminLoginPage() {
             className="w-full h-12 mt-2"
             size="lg"
           >
-            {isLoading ? 'Entrando...' : 'Entrar'}
+            {isLoading ? 'Criando conta...' : 'Criar conta de administrador'}
           </Button>
         </form>
       </div>
