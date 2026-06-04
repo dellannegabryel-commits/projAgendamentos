@@ -2,15 +2,15 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
-import { RefreshCw, Trash2, XCircle, CheckCircle, Search, Users, Clock } from 'lucide-react';
+import { RefreshCw, Trash2, XCircle, CheckCircle, Search, Users, Clock, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { Button, Card, Badge, Input } from '@/components/ui';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { CardSkeleton } from '@/components/feedback/Skeleton';
 import { api } from '@/lib/api';
-import type { Appointment } from '@/lib/api';
+import type { Appointment, PaginatedAppointments } from '@/lib/api';
 import { formatPhone, stripPhone } from '@/lib/phone';
-import { format, startOfDay, endOfDay } from 'date-fns';
+import { format, startOfDay, endOfDay, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 type FilterStatus = 'ALL' | 'PENDING' | 'CONFIRMED' | 'CANCELLED';
@@ -28,23 +28,49 @@ const statusColors = {
   CANCELLED: { variant: 'error' as const, label: 'Cancelado' },
 } as const;
 
+const PAGE_SIZE = 20;
+
 export default function AdminPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
   const [professionalsCount, setProfessionalsCount] = useState(0);
   const [filter, setFilter] = useState<FilterStatus>('ALL');
+  const [dateFilter, setDateFilter] = useState('');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
 
-  const loadAppointments = async () => {
+  const loadAppointments = async (targetPage = page) => {
     try {
       const status = filter === 'ALL' ? undefined : filter;
-      const data = await Promise.all([
-        api.appointments.list({ status }),
+      const dateFrom = dateFilter
+        ? startOfDay(parseISO(dateFilter)).toISOString()
+        : undefined;
+      const dateTo = dateFilter
+        ? endOfDay(parseISO(dateFilter)).toISOString()
+        : undefined;
+
+      const [paginated, professionals] = await Promise.all([
+        api.appointments.list({
+          status,
+          dateFrom,
+          dateTo,
+          page: targetPage,
+          pageSize: PAGE_SIZE,
+          sortBy: 'date',
+          order: 'asc',
+        }),
         api.professionals.list(),
       ]);
-      setAppointments(data[0]);
-      setProfessionalsCount(data[1].length);
+
+      const result = paginated as PaginatedAppointments;
+      setAppointments(result.data);
+      setTotal(result.total);
+      setPage(result.page);
+      setTotalPages(result.totalPages);
+      setProfessionalsCount(professionals.length);
     } catch {
       toast.error('Erro ao carregar agendamentos');
     } finally {
@@ -54,22 +80,30 @@ export default function AdminPage() {
 
   useEffect(() => {
     setLoading(true);
-    loadAppointments();
-  }, [filter]);
+    setPage(1);
+    loadAppointments(1);
+  }, [filter, dateFilter]);
+
+  useEffect(() => {
+    if (!loading) {
+      loadAppointments(page);
+    }
+  }, [page]);
 
   const kpis = useMemo(() => {
-    const today = new Date();
-    const todayStart = startOfDay(today).toISOString();
-    const todayEnd = endOfDay(today).toISOString();
-
-    const confirmedToday = appointments.filter(
-      (a) => a.status === 'CONFIRMED' && a.date >= todayStart && a.date <= todayEnd
-    );
-    const pending = appointments.filter((a) => a.status === 'PENDING');
-    const cancelled = appointments.filter((a) => a.status === 'CANCELLED');
-
-    return { confirmedToday: confirmedToday.length, pending: pending.length, cancelled: cancelled.length, professionals: professionalsCount };
+    return {
+      pending: appointments.filter((a) => a.status === 'PENDING').length,
+      cancelled: appointments.filter((a) => a.status === 'CANCELLED').length,
+      professionals: professionalsCount,
+    };
   }, [appointments, professionalsCount]);
+
+  const confirmedTodayCount = useMemo(() => {
+    const today = new Date().toDateString();
+    return appointments.filter(
+      (a) => a.status === 'CONFIRMED' && new Date(a.date).toDateString() === today
+    ).length;
+  }, [appointments]);
 
   const filteredAppointments = useMemo(() => {
     if (!search.trim()) return appointments;
@@ -124,9 +158,11 @@ export default function AdminPage() {
     }
   };
 
+  const clearDateFilter = () => setDateFilter('');
+
   const kpiCards = [
     { label: 'Pendentes', value: kpis.pending, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
-    { label: 'Confirmados Hoje', value: kpis.confirmedToday, icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { label: 'Confirmados Hoje', value: confirmedTodayCount, icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50' },
     { label: 'Cancelados', value: kpis.cancelled, icon: XCircle, color: 'text-red-600', bg: 'bg-red-50' },
     { label: 'Profissionais', value: kpis.professionals, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
   ];
@@ -137,7 +173,7 @@ export default function AdminPage() {
         title="Dashboard"
         description="Visão geral dos agendamentos do sistema"
         action={
-          <Button onClick={loadAppointments} variant="outline" size="sm" icon={<RefreshCw className="h-4 w-4" />}>
+          <Button onClick={() => loadAppointments(page)} variant="outline" size="sm" icon={<RefreshCw className="h-4 w-4" />}>
             Atualizar
           </Button>
         }
@@ -171,7 +207,7 @@ export default function AdminPage() {
           </div>
 
           <Card className="mb-6">
-            <div className="p-1">
+            <div className="p-4 space-y-3">
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
                 <Input
@@ -180,6 +216,21 @@ export default function AdminPage() {
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-10 border-0 bg-transparent"
                 />
+              </div>
+              <div className="flex items-center gap-2 pt-2 border-t border-zinc-100">
+                <Calendar className="h-4 w-4 text-zinc-400 shrink-0" />
+                <input
+                  type="date"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  className="flex-1 h-10 px-3 rounded-xl border border-zinc-200 text-sm focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 focus:outline-none"
+                  placeholder="Filtrar por data"
+                />
+                {dateFilter && (
+                  <Button variant="ghost" size="sm" onClick={clearDateFilter}>
+                    Limpar
+                  </Button>
+                )}
               </div>
             </div>
           </Card>
@@ -200,7 +251,7 @@ export default function AdminPage() {
             ))}
           </div>
 
-          {appointments.length === 0 ? (
+          {total === 0 ? (
             <Card>
               <EmptyState
                 title="Nenhum agendamento encontrado"
@@ -216,58 +267,71 @@ export default function AdminPage() {
               />
             </Card>
           ) : (
-            <Card padding="none">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-zinc-100">
-                      {['Cliente', 'Profissional', 'Data/Hora', 'Status', 'Ações'].map((h) => (
-                        <th
-                          key={h}
-                          className="text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider px-6 py-4"
-                        >
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-100">
-                    {filteredAppointments.map((appointment) => {
-                      const statusConfig = statusColors[appointment.status];
-                      return (
-                        <tr key={appointment.id} className="hover:bg-zinc-50 transition-colors">
-                          <td className="px-6 py-4">
-                            <div className="text-sm font-medium text-zinc-900">{appointment.clientName}</div>
-                            <div className="text-sm text-zinc-500">{formatPhone(appointment.clientPhone)}</div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="text-sm text-zinc-900">{appointment.professional.name}</div>
-                            <div className="text-xs text-zinc-500">{appointment.professional.category.name}</div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="text-sm text-zinc-900">
-                              {format(new Date(appointment.date), "dd/MM/yyyy", { locale: ptBR })}
-                            </div>
-                            <div className="text-sm text-zinc-500">
-                              {format(new Date(appointment.date), 'HH:mm')}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex gap-2 justify-end">
-                              {appointment.status === 'PENDING' && (
-                                <>
-                                  <Button
-                                    size="sm"
-                                    variant="primary"
-                                    onClick={() => handleConfirm(appointment.id)}
-                                    loading={actionId === appointment.id}
-                                    icon={<CheckCircle className="h-4 w-4" />}
-                                  >
-                                    Confirmar
-                                  </Button>
+            <>
+              <Card padding="none">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-zinc-100">
+                        {['Cliente', 'Profissional', 'Data/Hora', 'Status', 'Ações'].map((h) => (
+                          <th
+                            key={h}
+                            className="text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider px-6 py-4"
+                          >
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-100">
+                      {filteredAppointments.map((appointment) => {
+                        const statusConfig = statusColors[appointment.status];
+                        return (
+                          <tr key={appointment.id} className="hover:bg-zinc-50 transition-colors">
+                            <td className="px-6 py-4">
+                              <div className="text-sm font-medium text-zinc-900">{appointment.clientName}</div>
+                              <div className="text-sm text-zinc-500">{formatPhone(appointment.clientPhone)}</div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="text-sm text-zinc-900">{appointment.professional.name}</div>
+                              <div className="text-xs text-zinc-500">{appointment.professional.category.name}</div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="text-sm text-zinc-900">
+                                {format(new Date(appointment.date), "dd/MM/yyyy", { locale: ptBR })}
+                              </div>
+                              <div className="text-sm text-zinc-500">
+                                {format(new Date(appointment.date), 'HH:mm')}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex gap-2 justify-end">
+                                {appointment.status === 'PENDING' && (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      variant="primary"
+                                      onClick={() => handleConfirm(appointment.id)}
+                                      loading={actionId === appointment.id}
+                                      icon={<CheckCircle className="h-4 w-4" />}
+                                    >
+                                      Confirmar
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => handleCancel(appointment.id)}
+                                      loading={actionId === appointment.id}
+                                      icon={<XCircle className="h-4 w-4" />}
+                                    >
+                                      Cancelar
+                                    </Button>
+                                  </>
+                                )}
+                                {appointment.status === 'CONFIRMED' && (
                                   <Button
                                     size="sm"
                                     variant="ghost"
@@ -277,39 +341,59 @@ export default function AdminPage() {
                                   >
                                     Cancelar
                                   </Button>
-                                </>
-                              )}
-                              {appointment.status === 'CONFIRMED' && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleCancel(appointment.id)}
-                                  loading={actionId === appointment.id}
-                                  icon={<XCircle className="h-4 w-4" />}
-                                >
-                                  Cancelar
-                                </Button>
-                              )}
-                              {appointment.status === 'CANCELLED' && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleDelete(appointment.id)}
-                                  loading={actionId === appointment.id}
-                                  icon={<Trash2 className="h-4 w-4" />}
-                                >
-                                  Excluir
-                                </Button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
+                                )}
+                                {appointment.status === 'CANCELLED' && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleDelete(appointment.id)}
+                                    loading={actionId === appointment.id}
+                                    icon={<Trash2 className="h-4 w-4" />}
+                                  >
+                                    Excluir
+                                  </Button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4 px-2">
+                  <p className="text-sm text-zinc-500">
+                    Mostrando {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, total)} de {total}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                      icon={<ChevronLeft className="h-4 w-4" />}
+                    >
+                      Anterior
+                    </Button>
+                    <span className="text-sm text-zinc-600 px-3">
+                      Página {page} de {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={page === totalPages}
+                    >
+                      Próxima
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </>
       )}

@@ -13,11 +13,15 @@ export class AppointmentController {
         professionalId: z.string().uuid().optional(),
         dateFrom: z.string().refine(d => !isNaN(new Date(d).getTime()), 'Data inicial inválida').optional(),
         dateTo: z.string().refine(d => !isNaN(new Date(d).getTime()), 'Data final inválida').optional(),
+        page: z.coerce.number().int().min(1).optional(),
+        pageSize: z.coerce.number().int().min(1).max(100).optional(),
+        sortBy: z.enum(['date', 'createdAt', 'status']).optional(),
+        order: z.enum(['asc', 'desc']).optional(),
       });
       const filters = querySchema.parse(req.query);
-      
-      const appointments = await this.service.findAll(filters);
-      res.json(appointments);
+
+      const result = await this.service.findAll(filters);
+      res.json(result);
     } catch (error) {
       next(error);
     }

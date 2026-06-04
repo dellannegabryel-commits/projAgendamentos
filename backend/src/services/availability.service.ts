@@ -88,10 +88,11 @@ export class AvailabilityService {
     const dateEnd = new Date(date);
     dateEnd.setUTCHours(23, 59, 59, 999);
 
-    const appointments = await this.appointmentRepo.findAll({
+    const { data: appointments } = await this.appointmentRepo.findAll({
       professionalId,
       dateFrom: dateStart,
-      dateTo: dateEnd
+      dateTo: dateEnd,
+      pageSize: 100,
     });
 
     const bookedSet = new Set(

@@ -1,10 +1,29 @@
 import { prisma } from './prisma.js';
 import { Appointment, Prisma, AppointmentStatus } from '@prisma/client';
 
+export interface FindAllFilters {
+  status?: AppointmentStatus;
+  professionalId?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+  page?: number;
+  pageSize?: number;
+  sortBy?: 'date' | 'createdAt' | 'status';
+  order?: 'asc' | 'desc';
+}
+
+export interface PaginatedAppointments {
+  data: Appointment[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 export class AppointmentRepository {
-  async findAll(filters?: { status?: AppointmentStatus; professionalId?: string; dateFrom?: Date; dateTo?: Date }): Promise<Appointment[]> {
+  async findAll(filters?: FindAllFilters): Promise<PaginatedAppointments> {
     const where: Prisma.AppointmentWhereInput = {};
-    
+
     if (filters?.status) where.status = filters.status;
     if (filters?.professionalId) where.professionalId = filters.professionalId;
     if (filters?.dateFrom || filters?.dateTo) {
@@ -13,11 +32,29 @@ export class AppointmentRepository {
       if (filters?.dateTo) where.date.lte = filters.dateTo;
     }
 
-    return prisma.appointment.findMany({
-      where,
-      include: { professional: { include: { category: true } } },
-      orderBy: { date: 'asc' }
-    });
+    const page = Math.max(1, filters?.page ?? 1);
+    const pageSize = Math.min(100, Math.max(1, filters?.pageSize ?? 50));
+    const sortBy = filters?.sortBy ?? 'date';
+    const order = filters?.order ?? 'asc';
+
+    const [data, total] = await Promise.all([
+      prisma.appointment.findMany({
+        where,
+        include: { professional: { include: { category: true } } },
+        orderBy: { [sortBy]: order },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.appointment.count({ where }),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    };
   }
 
   async findById(id: string): Promise<Appointment | null> {
