@@ -78,10 +78,55 @@ describe('AppointmentService', () => {
         date: new Date(validInput.date),
         status: 'PENDING',
       });
+      mockProfessionalRepo.findById.mockResolvedValue({ name: 'Dr. Smith', address: 'Rua A' });
 
       const result = await service.create(validInput);
       expect(result.status).toBe(AppointmentStatus.PENDING);
       expect(mockAppointmentRepo.create).toHaveBeenCalledOnce();
+    });
+
+    it('deve enviar WhatsApp ao cliente após criar agendamento', async () => {
+      mockAvailabilityRepo.findByProfessionalId.mockResolvedValue([
+        { dayOfWeek: 5, startTime: '08:00', endTime: '18:00' },
+      ]);
+      mockAppointmentRepo.findByProfessionalAndDate.mockResolvedValue(null);
+      mockAppointmentRepo.create.mockResolvedValue({
+        id: '1',
+        professionalId: validInput.professionalId,
+        clientName: validInput.clientName,
+        clientPhone: validInput.clientPhone,
+        date: new Date(validInput.date),
+        status: 'PENDING',
+      });
+      mockProfessionalRepo.findById.mockResolvedValue({ name: 'Dr. Smith', address: 'Rua A' });
+
+      await service.create(validInput);
+
+      expect(mockWhatsAppService.sendText).toHaveBeenCalledOnce();
+      const call = mockWhatsAppService.sendText.mock.calls[0][0];
+      expect(call.number).toBe(validInput.clientPhone);
+      expect(call.text).toContain('recebemos');
+      expect(call.text).toContain('Dr. Smith');
+    });
+
+    it('deve criar agendamento mesmo se WhatsApp falhar', async () => {
+      mockAvailabilityRepo.findByProfessionalId.mockResolvedValue([
+        { dayOfWeek: 5, startTime: '08:00', endTime: '18:00' },
+      ]);
+      mockAppointmentRepo.findByProfessionalAndDate.mockResolvedValue(null);
+      mockAppointmentRepo.create.mockResolvedValue({
+        id: '1',
+        professionalId: validInput.professionalId,
+        clientName: validInput.clientName,
+        clientPhone: validInput.clientPhone,
+        date: new Date(validInput.date),
+        status: 'PENDING',
+      });
+      mockProfessionalRepo.findById.mockResolvedValue({ name: 'Dr. Smith', address: 'Rua A' });
+      mockWhatsAppService.sendText.mockRejectedValue(new Error('Evolution API offline'));
+
+      const result = await service.create(validInput);
+      expect(result.status).toBe(AppointmentStatus.PENDING);
     });
 
     it('deve aceitar telefone com mascara e armazenar somente digitos', async () => {
