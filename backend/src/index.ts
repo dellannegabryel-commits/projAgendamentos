@@ -1,8 +1,10 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import dotenv from 'dotenv';
 import routes from './routes/index.js';
 import healthRoutes from './routes/health.routes.js';
+import docsRoutes from './docs/docs.routes.js';
 import { loadEnv, getAppConfig } from './config/index.js';
 import { logger, requestLogger, logError } from './shared/logger/index.js';
 import { AppError } from './shared/errors/index.js';
@@ -16,10 +18,39 @@ const app = express();
 const config = getAppConfig();
 
 app.set('trust proxy', 1);
-app.use(cors({ origin: process.env.CORS_ORIGIN?.split(',') ?? false, credentials: true }));
+
+const allowedOrigins = process.env.CORS_ORIGIN?.split(',').map(o => o.trim()).filter(Boolean) ?? [];
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'", ...allowedOrigins],
+      fontSrc: ["'self'", 'data:'],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      frameAncestors: ["'none'"],
+    },
+  },
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  hsts: config.isProduction ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
+}));
+
+app.use(cors({
+  origin: allowedOrigins.length > 0 ? allowedOrigins : false,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
 app.use(express.json({ limit: '100kb' }));
 app.use(requestLogger);
 app.use('/health', healthRoutes);
+app.use('/api/docs', docsRoutes);
 app.use('/api', routes);
 
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
