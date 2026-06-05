@@ -88,18 +88,15 @@ jobs:
           cache-dependency-path: ./frontend/package-lock.json
 
       - name: Install Playwright deps
-        run: npm ci --prefix frontend
+        run: npm ci
         working-directory: ./frontend
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
         working-directory: ./frontend
 
-      - name: Copy .env.ci → .env
-        run: cp .env.ci .env
-
       - name: Start stack
-        run: docker compose up -d
+        run: docker compose --env-file .env.ci up -d
         env:
           CI: 'true'
 
@@ -114,7 +111,7 @@ jobs:
             sleep 5
           done
           echo "Backend did not become healthy"
-          docker compose logs
+          docker compose --env-file .env.ci logs
           exit 1
 
       - name: Run E2E tests
@@ -142,4 +139,4 @@ jobs:
 
       - name: Stop stack
         if: always()
-        run: docker compose down -v
+        run: docker compose --env-file .env.ci down -v
