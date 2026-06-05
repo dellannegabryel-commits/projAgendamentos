@@ -62,7 +62,10 @@ test.describe('Fluxo admin', () => {
     await page.getByLabel(/senha/i).fill('senha-errada');
     await page.getByRole('button', { name: /entrar/i }).click();
 
-    await expect(page.getByText(/inválid|erro/i).first()).toBeVisible({ timeout: 10_000 });
+    await expect(page).toHaveURL(/\/admin\/login/, { timeout: 5_000 });
+    await expect(page.getByText(/inválid/i).first()).toBeVisible({ timeout: 5_000 });
+    const token = await page.evaluate(() => localStorage.getItem('@agendafacil:token'));
+    expect(token).toBeNull();
   });
 
   test('admin acessa páginas de CRUD após login', async ({ page }) => {
