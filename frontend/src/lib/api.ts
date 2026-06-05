@@ -17,16 +17,21 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
   });
 
   if (response.status === 401 && typeof window !== 'undefined') {
+    const hadToken = localStorage.getItem('@agendafacil:token') !== null;
     localStorage.removeItem('@agendafacil:token');
     localStorage.removeItem('@agendafacil:user');
     document.cookie = 'agendafacil_token=; path=/; max-age=0';
-    window.location.href = '/admin/login';
-    throw new Error('Sessão expirada');
+    if (hadToken) {
+      window.location.href = '/admin/login';
+      throw new Error('Sessão expirada');
+    }
   }
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
-    throw new Error(error.error || 'Erro na requisição');
+    const body: any = await response.json().catch(() => ({}));
+    const raw = body?.error;
+    const message = typeof raw === 'string' ? raw : raw?.message;
+    throw new Error(message || 'Erro na requisição');
   }
 
   if (response.status === 204) {
