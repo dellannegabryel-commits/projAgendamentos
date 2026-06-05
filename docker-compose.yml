@@ -101,17 +101,26 @@ services:
     image: nginx:alpine
     ports:
       - "3000:80"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    configs:
+      - source: nginx_main
+        target: /etc/nginx/conf.d/default.conf
+      - source: nginx_routes
+        target: /etc/nginx/snippets/_routes.conf
     depends_on:
       - frontend
       - backend
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
+
+configs:
+  nginx_main:
+    file: ./nginx/nginx.conf
+  nginx_routes:
+    file: ./nginx/_routes.conf
 
 volumes:
   pgdata:

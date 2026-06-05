@@ -1,0 +1,10 @@
+services:
+  nginx:
+    ports:
+      - "443:443"
+    volumes:
+      - ${SSL_CERTS_DIR:?SSL_CERTS_DIR must point to a dir containing fullchain.pem and privkey.pem}:/etc/nginx/certs:ro
+
+configs:
+  nginx_main:
+    file: ./nginx/nginx.https.conf

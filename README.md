@@ -35,7 +35,7 @@ projAgendamentos/
 ### Docker (recomendado)
 
 ```bash
-# Subir tudo (PostgreSQL + backend + frontend)
+# Subir tudo (PostgreSQL + backend + frontend + nginx HTTP-only)
 docker compose up -d
 
 # Acessar:
@@ -48,6 +48,27 @@ docker compose down
 # Ver logs:
 docker compose logs -f
 ```
+
+### Deploy em produção
+
+Dois modos suportados, escolha conforme a topologia:
+
+**1. Atrás de LB / CDN que termina TLS (recomendado)**
+
+```bash
+docker compose up -d
+```
+
+O nginx interno responde HTTP em `:3000`. TLS é responsabilidade do edge (ALB, Cloudflare, etc.).
+
+**2. Self-hosted com cert próprio (Let's Encrypt, etc.)**
+
+```bash
+SSL_CERTS_DIR=/etc/letsencrypt/live/SEU_DOMINIO \
+  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+Requer `fullchain.pem` e `privkey.pem` no diretório apontado. nginx ouve em 80 (redirect → 443) e 443 (TLS terminado, HSTS habilitado).
 
 ### Desenvolvimento (sem Docker)
 
