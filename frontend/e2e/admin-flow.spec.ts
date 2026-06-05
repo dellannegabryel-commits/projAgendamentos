@@ -23,8 +23,9 @@ async function setupFirstAdmin(page: Page) {
   await page.getByLabel(/confirmar senha/i).fill(ADMIN_PASSWORD);
   await page.getByRole('button', { name: /criar conta/i }).click();
 
-  await page.waitForURL(/\/admin($|\/)/, { timeout: 15_000 });
-  await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible();
+  await page.waitForURL((u) => new URL(u).pathname === '/admin', { timeout: 15_000 });
+  await page.waitForLoadState('networkidle', { timeout: 15_000 });
+  await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({ timeout: 10_000 });
 }
 
 test.describe('Fluxo admin', () => {
@@ -50,8 +51,9 @@ test.describe('Fluxo admin', () => {
     await page.getByLabel(/senha/i).fill(ADMIN_PASSWORD);
     await page.getByRole('button', { name: /entrar/i }).click();
 
-    await page.waitForURL(/\/admin($|\/)/, { timeout: 10_000 });
-    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible();
+    await page.waitForURL((u) => new URL(u).pathname === '/admin', { timeout: 10_000 });
+    await page.waitForLoadState('networkidle', { timeout: 10_000 });
+    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({ timeout: 10_000 });
   });
 
   test('login rejeita credenciais inválidas', async ({ page }) => {
