@@ -31,14 +31,18 @@ export class AppointmentService {
   private availabilityRepo = new AvailabilityRepository();
   private whatsAppService = new WhatsAppService();
 
-  async findAll(filters?: { status?: AppointmentStatus; professionalId?: string; dateFrom?: string; dateTo?: string }) {
+  async findAll(filters?: { status?: AppointmentStatus; professionalId?: string; dateFrom?: string; dateTo?: string; page?: number; pageSize?: number; sortBy?: 'date' | 'createdAt' | 'status'; order?: 'asc' | 'desc' }) {
     const parsedFilters = filters ? {
       status: filters.status,
       professionalId: filters.professionalId,
       dateFrom: filters.dateFrom ? new Date(filters.dateFrom) : undefined,
-      dateTo: filters.dateTo ? new Date(filters.dateTo) : undefined
+      dateTo: filters.dateTo ? new Date(filters.dateTo) : undefined,
+      page: filters.page,
+      pageSize: filters.pageSize,
+      sortBy: filters.sortBy,
+      order: filters.order,
     } : undefined;
-    
+
     return this.appointmentRepo.findAll(parsedFilters);
   }
 
@@ -84,13 +88,20 @@ export class AppointmentService {
     }
 
     try {
-      return await this.appointmentRepo.create({
+      const appointment = await this.appointmentRepo.create({
         professional: { connect: { id: parsed.professionalId } },
         clientName: parsed.clientName,
         clientPhone: parsed.clientPhone,
         date: parsed.date,
         status: AppointmentStatus.PENDING
       });
+
+      const professional = await this.professionalRepo.findById(parsed.professionalId);
+      if (professional) {
+        await this.sendCreationMessage(appointment, professional);
+      }
+
+      return appointment;
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
         throw new ConflictError('Horário já está agendado', 'SLOT_UNAVAILABLE');
@@ -149,6 +160,29 @@ export class AppointmentService {
     }
 
     await this.appointmentRepo.delete(id);
+  }
+
+  private async sendCreationMessage(appointment: any, professional: any) {
+    const date = new Date(appointment.date);
+    const formattedDate = formatDateInBRT(date);
+    const formattedTime = formatTimeInBRT(date);
+
+    const message = `Olá ${appointment.clientName}, recebemos seu agendamento!
+📅 Data: ${formattedDate}
+🕒 Hora: ${formattedTime}
+👤 Profissional: ${professional.name}
+Status: PENDENTE DE CONFIRMAÇÃO
+
+Você receberá uma nova mensagem assim que o estabelecimento confirmar seu horário.`;
+
+    try {
+      await this.whatsAppService.sendText({
+        number: appointment.clientPhone,
+        text: message
+      });
+    } catch (error) {
+      logger.error({ err: error }, 'Erro ao enviar WhatsApp de criação');
+    }
   }
 
   private async sendConfirmationMessage(appointment: any, professional: any) {

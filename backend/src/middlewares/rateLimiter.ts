@@ -25,3 +25,16 @@ export const appointmentLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+export const passwordResetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  message: {
+    error: {
+      code: 'RATE_LIMIT',
+      message: 'Muitas tentativas. Tente novamente em 15 minutos.',
+    },
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});

@@ -1,21 +1,81 @@
+### ============================================================================
+### AUTH
+### ============================================================================
+
+### Verificar status (existe admin?)
+GET http://localhost:3001/api/auth/status
+
+### Setup inicial (cria primeiro admin - falha se já existe)
+POST http://localhost:3001/api/auth/setup
+Content-Type: application/json
+
+{
+  "name": "Administrador",
+  "email": "admin@agendafacil.com",
+  "password": "admin123"
+}
+
+### Login
+POST http://localhost:3001/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@agendafacil.com",
+  "password": "admin123"
+}
+
+### Perfil do admin logado
+GET http://localhost:3001/api/auth/me
+Authorization: Bearer TOKEN_AQUI
+
+### Esqueci a senha
+POST http://localhost:3001/api/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "admin@agendafacil.com"
+}
+
+### Redefinir senha (use o token retornado no log do backend)
+POST http://localhost:3001/api/auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "TOKEN_DO_LOG",
+  "password": "novasenha123"
+}
+
+### ============================================================================
+### CATEGORIES
+### ============================================================================
+
 ### Listar categorias
 GET http://localhost:3001/api/categories
 
 ### Criar categoria
 POST http://localhost:3001/api/categories
 Content-Type: application/json
+Authorization: Bearer TOKEN_AQUI
 
 {
   "name": "Corte de Cabelo",
   "description": "Serviços de corte e styling"
 }
 
+### ============================================================================
+### PROFESSIONALS
+### ============================================================================
+
 ### Listar profissionais
 GET http://localhost:3001/api/professionals
+
+### Listar profissionais por categoria
+GET http://localhost:3001/api/professionals/category/CATEGORIA_ID_AQUI
 
 ### Criar profissional
 POST http://localhost:3001/api/professionals
 Content-Type: application/json
+Authorization: Bearer TOKEN_AQUI
 
 {
   "name": "João Silva",
@@ -24,12 +84,14 @@ Content-Type: application/json
   "address": "Rua das Flores, 123"
 }
 
-### Listar profissionais por categoria
-GET http://localhost:3001/api/professionals/category/CATEGORIA_ID_AQUI
+### ============================================================================
+### AVAILABILITIES
+### ============================================================================
 
 ### Criar disponibilidade (dia 1 = segunda, 09:00 às 18:00)
 POST http://localhost:3001/api/availabilities
 Content-Type: application/json
+Authorization: Bearer TOKEN_AQUI
 
 {
   "professionalId": "PROFISSIONAL_ID_AQUI",
@@ -39,9 +101,13 @@ Content-Type: application/json
 }
 
 ### Obter horários disponíveis
-GET http://localhost:3001/api/availabilities/slots?professionalId=PROFISSIONAL_ID_AQUI&date=2024-03-20T10:00:00.000Z
+GET http://localhost:3001/api/availabilities/slots?professionalId=PROFISSIONAL_ID_AQUI&date=2027-03-20
 
-### Criar agendamento
+### ============================================================================
+### APPOINTMENTS
+### ============================================================================
+
+### Criar agendamento (público)
 POST http://localhost:3001/api/appointments
 Content-Type: application/json
 
@@ -49,17 +115,48 @@ Content-Type: application/json
   "professionalId": "PROFISSIONAL_ID_AQUI",
   "clientName": "Maria Santos",
   "clientPhone": "11988887777",
-  "date": "2024-03-20T14:00:00.000Z"
+  "date": "2027-03-20T14:00:00-03:00"
 }
 
-### Listar agendamentos
-GET http://localhost:3001/api/appointments
+### Listar agendamentos (paginado)
+GET http://localhost:3001/api/appointments?page=1&pageSize=20&sortBy=date&order=asc
+Authorization: Bearer TOKEN_AQUI
 
 ### Listar apenas pendentes
 GET http://localhost:3001/api/appointments?status=PENDING
+Authorization: Bearer TOKEN_AQUI
+
+### Filtrar por data
+GET http://localhost:3001/api/appointments?dateFrom=2027-03-20T00:00:00-03:00&dateTo=2027-03-20T23:59:59-03:00
+Authorization: Bearer TOKEN_AQUI
 
 ### Confirmar agendamento
 PATCH http://localhost:3001/api/appointments/APPOINTMENT_ID_AQUI/confirm
+Authorization: Bearer TOKEN_AQUI
 
 ### Cancelar agendamento
 PATCH http://localhost:3001/api/appointments/APPOINTMENT_ID_AQUI/cancel
+Authorization: Bearer TOKEN_AQUI
+
+### ============================================================================
+### HEALTH
+### ============================================================================
+
+### Healthcheck geral
+GET http://localhost:3001/health
+
+### Healthcheck do banco
+GET http://localhost:3001/health/database
+
+### Healthcheck da Evolution
+GET http://localhost:3001/health/evolution
+
+### ============================================================================
+### DOCS
+### ============================================================================
+
+### Swagger UI
+GET http://localhost:3001/api/docs
+
+### OpenAPI spec (JSON)
+GET http://localhost:3001/api/docs/openapi.json
