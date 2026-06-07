@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+model Category {
+  id          String        @id @default(uuid())
+  name        String        @unique
+  description String?
+  isActive    Boolean       @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime      @updatedAt
+  professionals Professional[]
+}
+
+model Professional {
+  id           String        @id @default(uuid())
+  name         String
+  phone        String
+  categoryId   String
+  category     Category      @relation(fields: [categoryId], references: [id])
+  address      String        @default("")
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  availabilities Availability[]
+  appointments Appointment[]
+}
+
+model Availability {
+  id             String       @id @default(uuid())
+  professionalId String
+  professional   Professional @relation(fields: [professionalId], references: [id])
+  dayOfWeek      Int
+  startTime      String
+  endTime        String
+  isActive       Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([isActive])
+}
+
+model Appointment {
+  id             String             @id @default(uuid())
+  professionalId String
+  professional   Professional        @relation(fields: [professionalId], references: [id])
+  clientName     String
+  clientPhone    String
+  date          DateTime          @db.Timestamptz(3)
+  status        AppointmentStatus  @default(PENDING)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@index([professionalId])
+  @@index([status])
+  @@index([date])
+}
+
+model Admin {
+  id                    String    @id @default(uuid())
+  name                  String
+  email                 String    @unique
+  password              String
+  passwordResetToken    String?
+  passwordResetExpires  DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([passwordResetToken])
+}

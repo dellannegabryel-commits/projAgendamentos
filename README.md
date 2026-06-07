@@ -1,27 +1,184 @@
-# 🕒 LightSched - Gerenciador de Agendas
+# Sistema de Agendamento Online com WhatsApp
 
-Motor de agendamento simplificado focado em disponibilidade de profissionais e gestão de horários.
-
-## 🎯 Foco do MVP
-Este projeto foca na orquestração de agendas para pequenas clínicas, priorizando a experiência de quem opera o sistema no dia a dia (Dashboard Administrativo).
-
-### Core Features
-- **Gestão de Grade:** Configuração de horários de trabalho por profissional.
-- **Agenda Multicoluna:** Visualização clara de todos os profissionais do dia lado a lado.
-- **Validação de Tempo:** Lógica rigorosa para impedir sobreposição de horários para o mesmo profissional.
-- **Status de Atendimento:** Controle visual do fluxo (Agendado -> Em Atendimento -> Finalizado).
-
-## 🛠️ Tecnologias
-- **Next.js 14** (App Router)
-- **Prisma ORM**
-- **PostgreSQL**
-- **shadcn/ui** (Components)
-
-## 🏗️ Como Rodar
-1. Instale as dependências: `npm install`
-2. Configure o seu banco no `.env` (DATABASE_URL).
-3. Rode as migrations: `npx prisma migrate dev`.
-4. Inicie o servidor: `npm run dev`.
+MVP de sistema de agendamento online com integração ao WhatsApp via Evolution API.
 
 ---
-*Projeto desenhado para ser escalável: a estrutura de dados permite a adição futura de recursos físicos e multi-unidades.*
+
+## 📁 Estrutura do Projeto
+
+```
+projAgendamentos/
+├── backend/              # API REST (Node.js + TypeScript + Prisma + Express)
+│   ├── src/
+│   │   ├── controllers/
+│   │   ├── services/
+│   │   ├── repositories/
+│   │   └── routes/
+│   └── prisma/
+├── frontend/             # Frontend (Next.js 14 + React + Tailwind CSS)
+│   └── src/
+│       ├── app/          # App Router (admin, agendamento, home)
+│       │   └── admin/    # Admin pages (categorias, profissionais, horarios, agendamentos)
+│       ├── components/   # UI components (Button, Input, Select, Card, Badge, Stepper, Modal)
+│       └── lib/          # API client + mock data
+├── evolution-api/         # Evolution API (WhatsApp)
+├── .github/workflows/    # CI (GitHub Actions)
+├── docker-compose.yml    # Orquestração Docker
+├── requests.http         # Exemplos de API
+└── README.md
+```
+
+---
+
+## 🚀 Como Rodar
+
+### Docker (recomendado)
+
+```bash
+# Subir tudo (PostgreSQL + backend + frontend + nginx HTTP-only)
+docker compose up -d
+
+# Acessar:
+#   Frontend: http://localhost:3000
+#   Backend:  http://localhost:3001/api
+
+# Parar:
+docker compose down
+
+# Ver logs:
+docker compose logs -f
+```
+
+### Deploy em produção
+
+Dois modos suportados, escolha conforme a topologia:
+
+**1. Atrás de LB / CDN que termina TLS (recomendado)**
+
+```bash
+docker compose up -d
+```
+
+O nginx interno responde HTTP em `:3000`. TLS é responsabilidade do edge (ALB, Cloudflare, etc.).
+
+**2. Self-hosted com cert próprio (Let's Encrypt, etc.)**
+
+```bash
+SSL_CERTS_DIR=/etc/letsencrypt/live/SEU_DOMINIO \
+  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+Requer `fullchain.pem` e `privkey.pem` no diretório apontado. nginx ouve em 80 (redirect → 443) e 443 (TLS terminado, HSTS habilitado).
+
+### Desenvolvimento (sem Docker)
+
+#### Backend
+
+```bash
+cd backend
+npm install
+cp .env.example .env
+# Configure o .env com suas credenciais
+
+# Criar banco PostgreSQL
+createdb agendamento_db
+
+# Sincronizar schema
+npm run db:push
+
+# Iniciar servidor com hot-reload
+npm run dev
+```
+
+Backend rodando em: `http://localhost:3000`
+
+#### Frontend
+
+```bash
+cd frontend
+npm install
+cp .env.example .env
+npm run dev
+```
+
+Frontend rodando em: `http://localhost:3001`
+
+---
+
+## 📋 Funcionalidades
+
+### Cliente
+- [x] Informar nome e telefone (WhatsApp)
+- [x] Selecionar categoria
+- [x] Selecionar profissional (filtrado por categoria)
+- [x] Escolher horário disponível
+- [x] Criar agendamento com status PENDENTE
+
+### Admin
+- [x] CRUD de categorias
+- [x] CRUD de profissionais
+- [x] Configurar horários disponíveis por profissional
+- [x] Listar agendamentos (com filtros por status, profissional, data)
+- [x] Confirmar ou cancelar agendamento
+
+### Regras de Negócio
+- [x] Não permitir agendamento duplicado no mesmo horário
+- [x] Horários disponíveis calculados com base na agenda + conflitos existentes
+- [x] Envio automático de WhatsApp ao confirmar agendamento (via Evolution API)
+- [x] Soft-delete (isActive) para categorias, profissionais e disponibilidades
+
+---
+
+## 🐳 Docker
+
+O projeto é totalmente containerizado com 4 serviços:
+
+| Serviço | Imagem | Porta (host) |
+|---------|--------|-------------|
+| `db` | postgres:16-alpine | 5432 |
+| `evolution-db` | postgres:16-alpine | 5433 |
+| `backend` | Node.js 20 (Express + Prisma) | 3001 |
+| `frontend` | Node.js 20 (Next.js) | 3000 |
+
+- A Evolution API roda separadamente (via `evolution-api/docker-compose.yml`) com seu próprio banco PostgreSQL (porta 5433)
+- Backend executa `prisma db push` automaticamente ao iniciar
+- Usuário não-root em todos os containers
+- OpenSSL instalado para compatibilidade com Prisma engines
+
+---
+
+## ⚙️ CI/CD
+
+GitHub Actions configurado em `.github/workflows/ci.yml`:
+
+- **Backend**: `npm ci` → `prisma generate` → `tsc`
+- **Frontend**: `npm ci` → `next build` (typecheck + lint)
+- **Docker**: `docker compose build`
+
+Acionado em push/PR para as branches `develop` e `main`.
+
+---
+
+## 🔧 Tech Stack
+
+| Parte | Tecnologia |
+|-------|------------|
+| Backend | Node.js 20, TypeScript, Express 4.18, Prisma 5.10 |
+| Banco | PostgreSQL 16 |
+| Frontend | Next.js 14, React 18, Tailwind CSS 3 |
+| Validação | Zod 3.22 |
+| WhatsApp | Evolution API |
+| UI Components | Button, Input, Select, Card, Badge, Stepper, Modal |
+| Infra | Docker, Docker Compose, GitHub Actions |
+
+---
+
+## 🧪 Recursos Adicionais
+
+- `requests.http` - Exemplos de requisição (VS Code REST Client)
+- `backend/prisma/schema.prisma` - Modelos de dados (Category, Professional, Availability, Appointment)
+- `frontend/src/lib/mock.ts` - Dados mockados para desenvolvimento
+- `evolution-api/docker-compose.yml` - Container da Evolution API para envio de WhatsApp
+
+---
+
