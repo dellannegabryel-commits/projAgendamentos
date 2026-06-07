@@ -58,7 +58,7 @@ export default function AdminLoginPage() {
       document.cookie = `agendafacil_token=${token}; path=/; max-age=86400; SameSite=Lax`;
 
       toast.success('Login realizado com sucesso!');
-      router.push('/admin');
+      window.location.href = '/admin';
     } catch (error: any) {
       toast.error(error.message || 'Erro ao realizar login. Verifique suas credenciais.');
     } finally {
