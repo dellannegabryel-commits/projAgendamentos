@@ -32,10 +32,13 @@ export class AvailabilityController {
           .refine(d => !isNaN(new Date(d).getTime()), 'Data inválida'),
       });
       const { professionalId, date } = querySchema.parse(req.query);
-      
+
+      const [year, month, day] = date.split('-').map(Number);
+      const brtDate = new Date(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00:00-03:00`);
+
       const slots = await this.service.getAvailableSlots(
         professionalId,
-        new Date(date)
+        brtDate
       );
       res.json(slots);
     } catch (error) {
