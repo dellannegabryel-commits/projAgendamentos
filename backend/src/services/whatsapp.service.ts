@@ -40,7 +40,7 @@ export class WhatsAppService {
       if (ddd.startsWith('0') || ddd.startsWith('1')) {
         throw new Error(`DDD inválido: ${ddd}`);
       }
-      return `55${digits}@s.whatsapp.net`;
+      return `55${digits}`;
     }
     return phone;
   }
