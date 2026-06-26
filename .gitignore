@@ -13,3 +13,6 @@ test-results/
 /blob-report/
 playwright/.cache/
 *.tsbuildinfo
+docker-compose.vps.yml
+.env.production
+backend.tar
