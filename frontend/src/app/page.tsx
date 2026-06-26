@@ -62,7 +62,7 @@ export default function HomePage() {
             <div className="mt-16 pt-8 border-t border-zinc-200/60 flex flex-col sm:flex-row items-center justify-center gap-8 text-zinc-500 text-sm">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-primary-500" />
-                <span>Multiplos agendamentos</span>
+<span>Multiplos agendamentos</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-primary-500" />
@@ -150,9 +150,9 @@ export default function HomePage() {
           <div className="absolute top-0 right-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 -z-10" />
           
           <div className="max-w-4xl mx-auto px-4 text-center">
-            <Smartphone className="w-16 h-16 text-secondary-200 mx-auto mb-6" />
-            <h2 className="text-3xl md:text-5xl font-bold text-secondary mb-6">Pronto para facilitar sua vida?</h2>
-            <p className="text-secondary-100 text-lg mb-10 max-w-2xl mx-auto">
+<Smartphone className="w-16 h-16 text-primary-200 mx-auto mb-6" />
+            <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">Pronto para facilitar sua vida?</h2>
+            <p className="text-primary-100 text-lg mb-10 max-w-2xl mx-auto">
               Não perca mais tempo tentando conciliar horários por mensagens demoradas. Faça seu agendamento agora mesmo.
             </p>
             <Link href="/agendamento">
