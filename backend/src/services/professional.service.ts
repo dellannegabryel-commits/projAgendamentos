@@ -7,11 +7,12 @@ const professionalSchema = z.object({
   phone: z.string()
     .transform(s => s.replace(/\D/g, ''))
     .pipe(z.string().regex(/^\d{10,11}$/, 'Telefone inválido')),
-  categoryId: z.string().uuid('ID da categoria inválido'),
-  address: z.string().optional().default('')
+  categoryIds: z.array(z.string().uuid('ID da categoria inválido')).min(1, 'Selecione ao menos uma categoria'),
+  address: z.string().optional().default(''),
+  photoUrl: z.string().url('URL da foto inválida').optional().or(z.literal(''))
 });
 
-export type CreateProfessionalInput = z.infer<typeof professionalSchema>;
+export type CreateProfessionalInput = z.input<typeof professionalSchema>;
 export type UpdateProfessionalInput = Partial<CreateProfessionalInput>;
 
 export class ProfessionalService {
@@ -37,16 +38,25 @@ export class ProfessionalService {
       name: parsed.name,
       phone: parsed.phone,
       address: parsed.address,
-      category: { connect: { id: parsed.categoryId } }
+      photoUrl: parsed.photoUrl || null,
+      categories: {
+        create: parsed.categoryIds.map(id => ({ categoryId: id }))
+      }
     });
   }
 
   async update(id: string, data: UpdateProfessionalInput) {
     await this.findById(id);
-    const updateData: Record<string, unknown> = { ...data };
-    if (data.categoryId) {
-      updateData.category = { connect: { id: data.categoryId } };
-      delete updateData.categoryId;
+    const updateData: Record<string, unknown> = {};
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.phone !== undefined) updateData.phone = data.phone.replace(/\D/g, '');
+    if (data.address !== undefined) updateData.address = data.address;
+    if (data.photoUrl !== undefined) updateData.photoUrl = data.photoUrl || null;
+    if (data.categoryIds !== undefined) {
+      updateData.categories = {
+        deleteMany: {},
+        create: data.categoryIds.map(id => ({ categoryId: id }))
+      };
     }
     return this.repository.update(id, updateData);
   }

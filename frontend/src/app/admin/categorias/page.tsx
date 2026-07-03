@@ -13,7 +13,7 @@ export default function CategoriesPage() {
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [formData, setFormData] = useState({ name: '', description: '' });
+  const [formData, setFormData] = useState({ name: '', description: '', duration: 30 });
 
   const loadCategories = async () => {
     try {
@@ -29,10 +29,10 @@ export default function CategoriesPage() {
   const handleOpenModal = (category?: Category) => {
     if (category) {
       setEditingCategory(category);
-      setFormData({ name: category.name, description: category.description || '' });
+      setFormData({ name: category.name, description: category.description || '', duration: category.duration ?? 30 });
     } else {
       setEditingCategory(null);
-      setFormData({ name: '', description: '' });
+      setFormData({ name: '', description: '', duration: 30 });
     }
     setIsModalOpen(true);
   };
@@ -46,11 +46,12 @@ export default function CategoriesPage() {
     e.preventDefault();
     setLoading(true);
     try {
+      const payload = { name: formData.name, description: formData.description, duration: formData.duration };
       if (editingCategory) {
-        await api.categories.update(editingCategory.id, formData);
+        await api.categories.update(editingCategory.id, payload);
         toast.success('Categoria atualizada');
       } else {
-        await api.categories.create(formData);
+        await api.categories.create(payload);
         toast.success('Categoria criada');
       }
       await loadCategories();
@@ -100,10 +101,10 @@ export default function CategoriesPage() {
       ) : (
         <Card padding="none">
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-zinc-100">
-                  {['Nome', 'Descrição', 'Ações'].map((h) => (
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-zinc-100">
+                    {['Nome', 'Descrição', 'Duração', 'Ações'].map((h) => (
                     <th key={h} className="text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider px-6 py-4">{h}</th>
                   ))}
                 </tr>
@@ -116,6 +117,9 @@ export default function CategoriesPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-zinc-500">{category.description || '-'}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-zinc-900">{category.duration} min</div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex gap-2 justify-end">
@@ -139,6 +143,7 @@ export default function CategoriesPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input label="Nome" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required placeholder="Ex: Corte de Cabelo" />
           <Input label="Descrição" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Opcional" />
+          <Input label="Duração (minutos)" type="number" min={5} max={480} value={formData.duration} onChange={(e) => setFormData({ ...formData, duration: Number(e.target.value) })} required placeholder="30" />
           <div className="pt-4 flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={handleCloseModal}>Cancelar</Button>
             <Button type="submit" loading={loading}>Salvar</Button>

@@ -24,6 +24,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: 'Categorias', href: '/admin/categorias' },
     { name: 'Profissionais', href: '/admin/profissionais' },
     { name: 'Horários', href: '/admin/horarios' },
+    { name: 'Bloqueios', href: '/admin/bloqueios' },
   ];
 
   return (

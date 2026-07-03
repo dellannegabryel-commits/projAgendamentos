@@ -4,6 +4,7 @@ import professionalRoutes from './professional.routes.js';
 import availabilityRoutes from './availability.routes.js';
 import appointmentRoutes from './appointment.routes.js';
 import authRoutes from './auth.routes.js';
+import dateBlockRoutes from './dateBlock.routes.js';
 
 const router = Router();
 
@@ -12,5 +13,6 @@ router.use('/categories', categoryRoutes);
 router.use('/professionals', professionalRoutes);
 router.use('/availabilities', availabilityRoutes);
 router.use('/appointments', appointmentRoutes);
+router.use('/date-blocks', dateBlockRoutes);
 
 export default router;

@@ -294,7 +294,7 @@ export default function AdminPage() {
                             </td>
                             <td className="px-6 py-4">
                               <div className="text-sm text-zinc-900">{appointment.professional.name}</div>
-                              <div className="text-xs text-zinc-500">{appointment.professional.category.name}</div>
+                              <div className="text-xs text-zinc-500">{appointment.professional.categories?.map(c => c.category.name).join(', ') || 'N/A'}</div>
                             </td>
                             <td className="px-6 py-4">
                               <div className="text-sm text-zinc-900">

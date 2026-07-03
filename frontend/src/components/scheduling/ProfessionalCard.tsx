@@ -33,10 +33,14 @@ export function ProfessionalCard({ professional, selected, onClick }: Profession
       )}
       <div className="flex items-start gap-4">
         <div className={clsx(
-          'w-12 h-12 rounded-full flex items-center justify-center shrink-0',
+          'w-12 h-12 rounded-full flex items-center justify-center shrink-0 overflow-hidden',
           selected ? 'bg-primary-100 text-primary-600' : 'bg-zinc-100 text-zinc-500'
         )}>
-          <User className="h-6 w-6" />
+          {professional.photoUrl ? (
+            <img src={professional.photoUrl} alt={professional.name} className="w-full h-full object-cover" />
+          ) : (
+            <User className="h-6 w-6" />
+          )}
         </div>
         <div className="flex-1 min-w-0 space-y-1.5">
           <h3 className="font-semibold text-zinc-900">{professional.name}</h3>

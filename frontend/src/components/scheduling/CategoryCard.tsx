@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { clsx } from 'clsx';
-import { Check, Sparkles } from 'lucide-react';
+import { Check, Sparkles, Clock } from 'lucide-react';
 import type { Category } from '@/lib/api';
 
 interface CategoryCardProps {
@@ -11,11 +11,16 @@ interface CategoryCardProps {
   onClick: () => void;
 }
 
-const icons = ['Sparkles', 'Scissors', 'Palette', 'Heart', 'Star', 'Sun'];
+function formatDuration(minutes: number): string {
+  if (minutes >= 60) {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return m > 0 ? `${h}h${m}` : `${h}h`;
+  }
+  return `${minutes} min`;
+}
 
 export function CategoryCard({ category, selected, onClick }: CategoryCardProps) {
-  const iconIndex = category.name.length % icons.length;
-
   return (
     <motion.button
       type="button"
@@ -47,6 +52,10 @@ export function CategoryCard({ category, selected, onClick }: CategoryCardProps)
           {category.description && (
             <p className="text-sm text-zinc-500 mt-1 line-clamp-2">{category.description}</p>
           )}
+          <span className="inline-flex items-center gap-1 mt-2 text-xs font-medium text-zinc-400">
+            <Clock className="h-3 w-3" />
+            {formatDuration(category.duration)}
+          </span>
         </div>
       </div>
     </motion.button>

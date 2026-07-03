@@ -20,6 +20,12 @@ export interface PaginatedAppointments {
   totalPages: number;
 }
 
+const appointmentInclude = {
+  professional: {
+    include: { categories: { include: { category: true } } }
+  }
+} satisfies Prisma.AppointmentInclude;
+
 export class AppointmentRepository {
   async findAll(filters?: FindAllFilters): Promise<PaginatedAppointments> {
     const where: Prisma.AppointmentWhereInput = {};
@@ -40,7 +46,7 @@ export class AppointmentRepository {
     const [data, total] = await Promise.all([
       prisma.appointment.findMany({
         where,
-        include: { professional: { include: { category: true } } },
+        include: appointmentInclude,
         orderBy: { [sortBy]: order },
         skip: (page - 1) * pageSize,
         take: pageSize,
@@ -60,7 +66,7 @@ export class AppointmentRepository {
   async findById(id: string): Promise<Appointment | null> {
     return prisma.appointment.findUnique({
       where: { id },
-      include: { professional: { include: { category: true } } }
+      include: appointmentInclude
     });
   }
 

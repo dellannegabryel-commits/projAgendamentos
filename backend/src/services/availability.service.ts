@@ -1,4 +1,4 @@
-import { AvailabilityRepository, AppointmentRepository } from '../repositories/index.js';
+import { AvailabilityRepository, AppointmentRepository, ProfessionalRepository, DateBlockRepository } from '../repositories/index.js';
 import { AppointmentStatus, Prisma } from '@prisma/client';
 import { ConflictError } from '../shared/errors/index.js';
 import { getDayOfWeekInBRT, formatTimeInBRT } from '../shared/timezone/index.js';
@@ -24,6 +24,8 @@ export interface TimeSlot {
 export class AvailabilityService {
   private availabilityRepo = new AvailabilityRepository();
   private appointmentRepo = new AppointmentRepository();
+  private professionalRepo = new ProfessionalRepository();
+  private dateBlockRepo = new DateBlockRepository();
 
   async findAll() {
     return this.availabilityRepo.findAll();
@@ -77,11 +79,18 @@ export class AvailabilityService {
   }
 
   async getAvailableSlots(professionalId: string, date: Date) {
+    const blocked = await this.dateBlockRepo.findOverlapping(professionalId, date);
+    if (blocked) return [];
+
     const dayOfWeek = getDayOfWeekInBRT(date);
     const availabilities = await this.availabilityRepo.findByProfessionalId(professionalId);
 
     const dayAvailabilities = availabilities.filter(a => a.dayOfWeek === dayOfWeek);
     if (dayAvailabilities.length === 0) return [];
+
+    const professional = await this.professionalRepo.findById(professionalId);
+    const durations = professional?.categories?.map(c => c.category.duration).filter(Boolean) ?? [];
+    const slotDuration = durations.length > 0 ? Math.min(...durations) : 30;
 
     const dateStart = new Date(date);
     dateStart.setUTCHours(0, 0, 0, 0);
@@ -104,7 +113,7 @@ export class AvailabilityService {
     const slots: TimeSlot[] = [];
 
     for (const avail of dayAvailabilities) {
-      const availSlots = this.generateTimeSlots(avail.startTime, avail.endTime);
+      const availSlots = this.generateTimeSlots(avail.startTime, avail.endTime, slotDuration);
       for (const slot of availSlots) {
         slots.push({
           time: slot,
@@ -116,7 +125,7 @@ export class AvailabilityService {
     return slots.sort((a, b) => a.time.localeCompare(b.time));
   }
 
-  private generateTimeSlots(start: string, end: string): string[] {
+  private generateTimeSlots(start: string, end: string, durationMinutes = 30): string[] {
     const slots: string[] = [];
     const [startHour, startMin] = start.split(':').map(Number);
     const [endHour, endMin] = end.split(':').map(Number);
@@ -124,11 +133,11 @@ export class AvailabilityService {
     let current = startHour * 60 + startMin;
     const endMinutes = endHour * 60 + endMin;
 
-    while (current < endMinutes) {
+    while (current + durationMinutes <= endMinutes) {
       const hour = Math.floor(current / 60);
       const min = current % 60;
       slots.push(`${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`);
-      current += 30;
+      current += durationMinutes;
     }
 
     return slots;

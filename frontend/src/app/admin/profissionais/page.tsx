@@ -16,7 +16,7 @@ export default function ProfessionalsPage() {
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProfessional, setEditingProfessional] = useState<Professional | null>(null);
-  const [formData, setFormData] = useState({ name: '', phone: '', address: '', categoryId: '' });
+  const [formData, setFormData] = useState({ name: '', phone: '', address: '', categoryIds: [] as string[], photoUrl: '' });
 
   const loadData = async () => {
     try {
@@ -33,10 +33,16 @@ export default function ProfessionalsPage() {
   const handleOpenModal = (professional?: Professional) => {
     if (professional) {
       setEditingProfessional(professional);
-      setFormData({ name: professional.name, phone: professional.phone, address: professional.address, categoryId: professional.categoryId });
+      setFormData({
+        name: professional.name,
+        phone: professional.phone,
+        address: professional.address,
+        categoryIds: professional.categories.map(c => c.category.id),
+        photoUrl: professional.photoUrl || '',
+      });
     } else {
       setEditingProfessional(null);
-      setFormData({ name: '', phone: '', address: '', categoryId: '' });
+      setFormData({ name: '', phone: '', address: '', categoryIds: [], photoUrl: '' });
     }
     setIsModalOpen(true);
   };
@@ -48,14 +54,21 @@ export default function ProfessionalsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.categoryId) { toast.error('Selecione uma categoria'); return; }
+    if (formData.categoryIds.length === 0) { toast.error('Selecione ao menos uma categoria'); return; }
     setLoading(true);
     try {
+      const payload = {
+        name: formData.name,
+        phone: formData.phone,
+        address: formData.address,
+        categoryIds: formData.categoryIds,
+        photoUrl: formData.photoUrl || undefined,
+      };
       if (editingProfessional) {
-        await api.professionals.update(editingProfessional.id, formData);
+        await api.professionals.update(editingProfessional.id, payload);
         toast.success('Profissional atualizado');
       } else {
-        await api.professionals.create(formData);
+        await api.professionals.create(payload);
         toast.success('Profissional criado');
       }
       await loadData();
@@ -124,7 +137,9 @@ export default function ProfessionalsPage() {
                       <div className="text-xs text-zinc-500">{professional.address}</div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-zinc-500">{professional.category?.name || 'N/A'}</div>
+                      <div className="text-sm text-zinc-500">
+                        {professional.categories?.map(c => c.category.name).join(', ') || 'N/A'}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex gap-2 justify-end">
@@ -151,13 +166,33 @@ export default function ProfessionalsPage() {
           <FormField label="Endereço" required>
             <Input value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} required placeholder="Rua, número, bairro" />
           </FormField>
-          <Select
-            label="Categoria"
-            placeholder="Selecione uma categoria"
-            value={formData.categoryId}
-            onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-            options={categories.map((c) => ({ value: c.id, label: c.name }))}
-          />
+          <FormField label="Categorias (selecione uma ou mais)" required>
+            <div className="space-y-2">
+              {categories.map((cat) => (
+                <label key={cat.id} className="flex items-center gap-3 p-3 rounded-xl border border-zinc-200 hover:border-zinc-300 cursor-pointer transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={formData.categoryIds.includes(cat.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setFormData({ ...formData, categoryIds: [...formData.categoryIds, cat.id] });
+                      } else {
+                        setFormData({ ...formData, categoryIds: formData.categoryIds.filter(id => id !== cat.id) });
+                      }
+                    }}
+                    className="h-4 w-4 accent-primary-500"
+                  />
+                  <div className="text-sm">
+                    <span className="font-medium text-zinc-900">{cat.name}</span>
+                    <span className="text-zinc-400 ml-2">({cat.duration} min)</span>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </FormField>
+          <FormField label="URL da Foto (opcional)">
+            <Input value={formData.photoUrl} onChange={(e) => setFormData({ ...formData, photoUrl: e.target.value })} placeholder="https://exemplo.com/foto.jpg" />
+          </FormField>
           <div className="pt-4 flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={handleCloseModal}>Cancelar</Button>
             <Button type="submit" loading={loading}>Salvar</Button>

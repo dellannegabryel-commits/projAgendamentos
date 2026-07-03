@@ -45,15 +45,28 @@ export interface Category {
   id: string;
   name: string;
   description?: string;
+  duration: number;
+}
+
+export interface ProfessionalCategory {
+  category: Category;
 }
 
 export interface Professional {
   id: string;
   name: string;
   phone: string;
-  categoryId: string;
-  category: Category;
+  photoUrl?: string;
+  categories: ProfessionalCategory[];
   address: string;
+}
+
+export interface DateBlock {
+  id: string;
+  professionalId: string;
+  professional?: Professional;
+  date: string;
+  reason?: string;
 }
 
 export interface TimeSlot {
@@ -118,9 +131,9 @@ export const api = {
   categories: {
     list: (options?: RequestInit) => fetchApi<Category[]>('/categories', options),
     get: (id: string) => fetchApi<Category>(`/categories/${id}`),
-    create: (data: { name: string; description?: string }) =>
+    create: (data: { name: string; description?: string; duration?: number }) =>
       fetchApi<Category>('/categories', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id: string, data: Partial<{ name: string; description: string }>) =>
+    update: (id: string, data: Partial<{ name: string; description: string; duration: number }>) =>
       fetchApi<Category>(`/categories/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: string) => fetchApi<void>(`/categories/${id}`, { method: 'DELETE' }),
   },
@@ -129,9 +142,9 @@ export const api = {
     list: () => fetchApi<Professional[]>('/professionals'),
     getByCategory: (categoryId: string, options?: RequestInit) => fetchApi<Professional[]>(`/professionals/category/${categoryId}`, options),
     get: (id: string) => fetchApi<Professional>(`/professionals/${id}`),
-    create: (data: Omit<Professional, 'id' | 'category'>) =>
+    create: (data: { name: string; phone: string; categoryIds: string[]; address?: string; photoUrl?: string }) =>
       fetchApi<Professional>('/professionals', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id: string, data: Partial<Omit<Professional, 'id' | 'category'>>) =>
+    update: (id: string, data: { name?: string; phone?: string; categoryIds?: string[]; address?: string; photoUrl?: string }) =>
       fetchApi<Professional>(`/professionals/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: string) => fetchApi<void>(`/professionals/${id}`, { method: 'DELETE' }),
   },
@@ -171,5 +184,13 @@ export const api = {
       fetchApi<Appointment>(`/appointments/${id}/cancel`, { method: 'PATCH' }),
     delete: (id: string) =>
       fetchApi<void>(`/appointments/${id}`, { method: 'DELETE' }),
+  },
+
+  dateBlocks: {
+    list: () => fetchApi<DateBlock[]>('/date-blocks'),
+    create: (data: { professionalId: string; date: string; reason?: string }) =>
+      fetchApi<DateBlock>('/date-blocks', { method: 'POST', body: JSON.stringify(data) }),
+    delete: (id: string) =>
+      fetchApi<void>(`/date-blocks/${id}`, { method: 'DELETE' }),
   },
 };
