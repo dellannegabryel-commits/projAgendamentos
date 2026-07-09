@@ -37,7 +37,7 @@ export class WhatsAppService {
     const digits = phone.replace(/\D/g, '');
     if (digits.length === 10 || digits.length === 11) {
       const ddd = digits.slice(0, 2);
-      if (ddd.startsWith('0') || ddd.startsWith('1')) {
+      if (ddd.startsWith('0')) {
         throw new Error(`DDD inválido: ${ddd}`);
       }
       return `55${digits}`;
